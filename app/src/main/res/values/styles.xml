@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base application theme -->
+    <style name="Theme.Altron" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorPrimaryVariant">@color/colorPrimaryLight</item>
+        <item name="colorOnPrimary">@color/textColorWhite</item>
+        <item name="colorSecondary">@color/colorSecondary</item>
+        <item name="colorSecondaryVariant">@color/colorSecondaryDark</item>
+        <item name="colorOnSecondary">@color/textColorWhite</item>
+        <item name="android:colorBackground">@color/backgroundColor</item>
+        <item name="colorSurface">@color/surfaceColor</item>
+        <item name="colorOnSurface">@color/textColorPrimary</item>
+        <item name="colorError">@color/errorColor</item>
+        <item name="colorOnError">@color/textColorWhite</item>
+        <item name="android:statusBarColor">@color/statusBarColor</item>
+        <item name="android:navigationBarColor">@color/navigationBarColor</item>
+    </style>
+    
+    <!-- Splash theme -->
+    <style name="Theme.Altron.Splash" parent="Theme.MaterialComponents.NoActionBar">
+        <item name="android:windowBackground">@color/colorPrimary</item>
+        <item name="android:statusBarColor">@color/colorPrimaryDark</item>
+    </style>
+    
+    <!-- Call theme -->
+    <style name="Theme.Altron.Call" parent="Theme.MaterialComponents.NoActionBar">
+        <item name="android:windowBackground">@color/callBackground</item>
+        <item name="android:statusBarColor">@android:color/black</item>
+        <item name="android:navigationBarColor">@android:color/black</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+    
+    <!-- Text styles -->
+    <style name="TextAppearance.Altron.Title" parent="TextAppearance.MaterialComponents.Headline5">
+        <item name="android:textColor">@color/textColorPrimary</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+    
+    <style name="TextAppearance.Altron.Subtitle" parent="TextAppearance.MaterialComponents.Subtitle1">
+        <item name="android:textColor">@color/textColorSecondary</item>
+    </style>
+    
+    <style name="TextAppearance.Altron.Body" parent="TextAppearance.MaterialComponents.Body1">
+        <item name="android:textColor">@color/textColorPrimary</item>
+    </style>
+    
+    <!-- Button styles -->
+    <style name="Widget.Altron.Button.Primary" parent="Widget.MaterialComponents.Button">
+        <item name="android:backgroundTint">@color/colorPrimary</item>
+        <item name="android:textColor">@color/textColorWhite</item>
+        <item name="android:paddingVertical">12dp</item>
+        <item name="android:paddingHorizontal">24dp</item>
+        <item name="cornerRadius">8dp</item>
+    </style>
+    
+    <style name="Widget.Altron.Button.Secondary" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="android:textColor">@color/colorPrimary</item>
+        <item name="strokeColor">@color/colorPrimary</item>
+        <item name="android:paddingVertical">12dp</item>
+        <item name="android:paddingHorizontal">24dp</item>
+        <item name="cornerRadius">8dp</item>
+    </style>
+    
+    <!-- EditText styles -->
+    <style name="Widget.Altron.TextInputLayout" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="boxBackgroundColor">@color/surfaceColor</item>
+        <item name="boxStrokeColor">@color/colorPrimary</item>
+        <item name="hintTextColor">@color/textColorSecondary</item>
+        <item name="android:textColor">@color/textColorPrimary</item>
+        <item name="boxCornerRadiusTopStart">8dp</item>
+        <item name="boxCornerRadiusTopEnd">8dp</item>
+        <item name="boxCornerRadiusBottomStart">8dp</item>
+        <item name="boxCornerRadiusBottomEnd">8dp</item>
+    </style>
+    
+    <!-- Card styles -->
+    <style name="Widget.Altron.Card" parent="Widget.MaterialComponents.CardView">
+        <item name="cardBackgroundColor">@color/surfaceColor</item>
+        <item name="cardCornerRadius">8dp</item>
+        <item name="cardElevation">4dp</item>
+    </style>
+    
+    <!-- Toolbar styles -->
+    <style name="Widget.Altron.Toolbar" parent="Widget.MaterialComponents.Toolbar.Primary">
+        <item name="android:background">@color/appBarColor</item>
+        <item name="titleTextColor">@color/textColorWhite</item>
+        <item name="subtitleTextColor">@color/textColorWhite</item>
+    </style>
+</resources>

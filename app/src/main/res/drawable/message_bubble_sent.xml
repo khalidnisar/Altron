@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="@color/sentMessageBackground" />
+    <corners android:radius="@dimen/message_bubble_corner_radius" />
+    <padding android:left="@dimen/message_bubble_padding"
+             android:top="@dimen/message_bubble_padding"
+             android:right="@dimen/message_bubble_padding"
+             android:bottom="@dimen/message_bubble_padding" />
+</shape>
