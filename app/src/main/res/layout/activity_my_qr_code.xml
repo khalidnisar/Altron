@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/backgroundColor"
+    android:orientation="vertical"
+    android:padding="@dimen/spacing_xl"
+    tools:context=".ui.activities.MyQRCodeActivity">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="@dimen/spacing_lg"
+        android:text="@string/my_qr_code"
+        android:textColor="@color/textColorPrimary"
+        android:textSize="@dimen/text_size_xxl"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="@dimen/spacing_xxl"
+        android:text="@string/qr_code_info"
+        android:textColor="@color/textColorSecondary"
+        android:textSize="@dimen/text_size_md" />
+
+    <ImageView
+        android:id="@+id/qrCodeImageView"
+        android:layout_width="@dimen/qr_code_size"
+        android:layout_height="@dimen/qr_code_size"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="@dimen/spacing_xxl"
+        android:contentDescription="My QR Code" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:orientation="vertical"
+        android:gravity="center">
+
+        <de.hdodenhof.circleimageview.CircleImageView
+            android:id="@+id/userProfileImageView"
+            android:layout_width="@dimen/profile_image_large"
+            android:layout_height="@dimen/profile_image_large"
+            android:src="@drawable/ic_person" />
+
+        <TextView
+            android:id="@+id/userNameTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_sm"
+            android:textColor="@color/textColorPrimary"
+            android:textSize="@dimen/text_size_lg"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/userPhoneTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_xs"
+            android:textColor="@color/textColorSecondary"
+            android:textSize="@dimen/text_size_md" />
+
+    </LinearLayout>
+
+</LinearLayout>

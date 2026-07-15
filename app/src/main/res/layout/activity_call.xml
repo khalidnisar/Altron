@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/callBackground"
+    tools:context=".ui.activities.CallActivity">
+
+    <!-- Remote video view -->
+    <org.webrtc.SurfaceViewRenderer
+        android:id="@+id/remoteVideoView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="visible" />
+
+    <!-- Local video view (small) -->
+    <org.webrtc.SurfaceViewRenderer
+        android:id="@+id/localVideoView"
+        android:layout_width="@dimen/profile_image_large"
+        android:layout_height="@dimen/profile_image_large"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentTop="true"
+        android:layout_margin="@dimen/spacing_md"
+        android:visibility="visible" />
+
+    <!-- Call info overlay -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="@dimen/spacing_xxl"
+        android:orientation="vertical"
+        android:padding="@dimen/spacing_md">
+
+        <TextView
+            android:id="@+id/callerNameTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/callText"
+            android:textSize="@dimen/text_size_xxl"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/callStatusTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_xs"
+            android:textColor="@color/callText"
+            android:textSize="@dimen/text_size_md" />
+
+        <Chronometer
+            android:id="@+id/chronometer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_sm"
+            android:textColor="@color/callText"
+            android:textSize="@dimen/text_size_lg" />
+
+    </LinearLayout>
+
+    <!-- Call duration -->
+    <TextView
+        android:id="@+id/callDurationTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="@dimen/spacing_xxl"
+        android:textColor="@color/callText"
+        android:textSize="@dimen/text_size_xxl"
+        android:visibility="gone" />
+
+    <!-- Call controls -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="@dimen/spacing_xxl"
+        android:orientation="horizontal"
+        android:padding="@dimen/spacing_lg">
+
+        <ImageButton
+            android:id="@+id/muteButton"
+            android:layout_width="@dimen/call_button_size"
+            android:layout_height="@dimen/call_button_size"
+            android:layout_marginEnd="@dimen/call_button_margin"
+            android:background="@drawable/call_button_background"
+            android:padding="@dimen/spacing_md"
+            android:src="@drawable/ic_mic"
+            android:tint="@color/callText" />
+
+        <ImageButton
+            android:id="@+id/speakerButton"
+            android:layout_width="@dimen/call_button_size"
+            android:layout_height="@dimen/call_button_size"
+            android:layout_marginEnd="@dimen/call_button_margin"
+            android:background="@drawable/call_button_background"
+            android:padding="@dimen/spacing_md"
+            android:src="@drawable/ic_speaker_off"
+            android:tint="@color/callText" />
+
+        <ImageButton
+            android:id="@+id/videoButton"
+            android:layout_width="@dimen/call_button_size"
+            android:layout_height="@dimen/call_button_size"
+            android:layout_marginEnd="@dimen/call_button_margin"
+            android:background="@drawable/call_button_background"
+            android:padding="@dimen/spacing_md"
+            android:src="@drawable/ic_videocam"
+            android:tint="@color/callText" />
+
+        <ImageButton
+            android:id="@+id/endCallButton"
+            android:layout_width="@dimen/call_end_button_size"
+            android:layout_height="@dimen/call_end_button_size"
+            android:background="@drawable/call_end_button_background"
+            android:padding="@dimen/spacing_md"
+            android:src="@drawable/ic_call_end"
+            android:tint="@color/textColorWhite" />
+
+    </LinearLayout>
+
+</RelativeLayout>

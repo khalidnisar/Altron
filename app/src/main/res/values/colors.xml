@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#6200EE</color>
+    <color name="colorPrimaryDark">#3700B3</color>
+    <color name="colorPrimaryLight">#9E47FF</color>
+    <color name="colorAccent">#03DAC6</color>
+    <color name="colorAccentLight">#80CBC4</color>
+    
+    <color name="colorSecondary">#018786</color>
+    <color name="colorSecondaryDark">#015F5E</color>
+    
+    <color name="textColorPrimary">#212121</color>
+    <color name="textColorSecondary">#757575</color>
+    <color name="textColorWhite">#FFFFFF</color>
+    
+    <color name="backgroundColor">#FFFFFF</color>
+    <color name="backgroundColorLight">#F5F5F5</color>
+    <color name="backgroundColorDark">#E5E5EA</color>
+    
+    <color name="surfaceColor">#FFFFFF</color>
+    <color name="errorColor">#B00020</color>
+    
+    <!-- Call colors -->
+    <color name="callBackground">#121212</color>
+    <color name="callText">#FFFFFF</color>
+    <color name="callButtonBackground">#333333</color>
+    <color name="callButtonEnd">#FF0000</color>
+    
+    <!-- Message colors -->
+    <color name="sentMessageBackground">#6200EE</color>
+    <color name="sentMessageText">#FFFFFF</color>
+    <color name="receivedMessageBackground">#E5E5EA</color>
+    <color name="receivedMessageText">#212121</color>
+    
+    <!-- Status colors -->
+    <color name="onlineColor">#4CAF50</color>
+    <color name="offlineColor">#757575</color>
+    <color name="deliveredColor">#03DAC6</color>
+    
+    <!-- App colors -->
+    <color name="appBarColor">#6200EE</color>
+    <color name="statusBarColor">#3700B3</color>
+    <color name="navigationBarColor">#FFFFFF</color>
+</resources>
