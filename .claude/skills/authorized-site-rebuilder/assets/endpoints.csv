@@ -1,0 +1,1 @@
+endpoint_id,protocol,method_or_event,parameterized_path_or_operation,purpose,auth_role,request_schema_ref,response_schema_ref,status_or_error_codes,side_effects,idempotency,pagination_or_streaming,evidence_ref,confidence,implementation_status,notes

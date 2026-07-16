@@ -1,0 +1,27 @@
+openapi: 3.1.0
+info:
+  title: Replacement API
+  version: 0.1.0
+  description: >-
+    Clean-room contract for the authorized reconstruction of {{TARGET_URL}}.
+    Contains no target credentials, private data, or claim about hidden implementation.
+servers:
+  - url: http://localhost:3000
+    description: Local replacement service
+paths: {}
+components:
+  schemas:
+    Error:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        correlationId:
+          type: string
+  securitySchemes: {}
