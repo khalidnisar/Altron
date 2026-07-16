@@ -21,10 +21,17 @@ Without reproduction authorization, it switches to **inspiration-only** mode: di
 The checked-in project skill is discovered automatically from:
 
 ```text
-.claude/skills/authorized-site-rebuilder/SKILL.md
+Website-Ginni/.claude/skills/authorized-site-rebuilder/SKILL.md
 ```
 
-Start Claude Code at the repository root and invoke:
+Start Claude Code inside the Website-Ginni folder:
+
+```bash
+cd Website-Ginni
+claude
+```
+
+Then invoke:
 
 ```text
 /authorized-site-rebuilder https://your-authorized-site.example ./replacement
@@ -44,7 +51,7 @@ To use it across projects, copy the entire directory—not only `SKILL.md`—to:
 
 ```bash
 mkdir -p ~/.claude/skills
-cp -R .claude/skills/authorized-site-rebuilder ~/.claude/skills/
+cp -R Website-Ginni/.claude/skills/authorized-site-rebuilder ~/.claude/skills/
 ```
 
 Then invoke `/authorized-site-rebuilder` from any project. Review skill files before trusting them, as with any executable project configuration.
@@ -53,8 +60,10 @@ Then invoke `/authorized-site-rebuilder` from any project. Review skill files be
 
 After authorization is confirmed:
 
+From the repository root:
+
 ```bash
-python .claude/skills/authorized-site-rebuilder/scripts/init_workspace.py \
+python Website-Ginni/.claude/skills/authorized-site-rebuilder/scripts/init_workspace.py \
   --url "https://your-authorized-site.example" \
   --output .site-rebuild \
   --mode black-box-authorized \
@@ -74,7 +83,7 @@ The initializer makes **zero network requests**. It refuses to overwrite a nonem
 ## Validate artifacts and scan for common secrets
 
 ```bash
-python .claude/skills/authorized-site-rebuilder/scripts/validate_workspace.py \
+python Website-Ginni/.claude/skills/authorized-site-rebuilder/scripts/validate_workspace.py \
   --root .site-rebuild
 ```
 

@@ -60,10 +60,6 @@ Thumbs.db
 /app/src/test/
 /app/src/androidTest/
 
-# Python tooling
-__pycache__/
-*.py[cod]
-
 # Coverage reports
 coverage/
 
