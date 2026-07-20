@@ -1,0 +1,30 @@
+{
+  "name": "altron-orchestrator-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Claude to orchestrate multiple headless coding agents (opencode, cursor-agent, etc) using git worktrees",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "test": "echo \"No tests yet\""
+  },
+  "keywords": [
+    "mcp",
+    "claude",
+    "orchestrator",
+    "multi-agent",
+    "coding-agents",
+    "worktree"
+  ],
+  "author": "Altron Project",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "fs-extra": "^11.3.0",
+    "zod": "^3.25.0"
+  },
+  "bin": {
+    "altron-orchestrator": "./index.js"
+  }
+}

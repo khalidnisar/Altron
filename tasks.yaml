@@ -1,0 +1,150 @@
+# Altron Hybrid Multi-Agent Orchestration Task Board
+#
+# HYBRID MODEL RULES:
+# 1. Claude ALWAYS plans the work first.
+# 2. Claude distributes LONG but EASY tasks to sub-agents.
+# 3. Claude keeps ~30-40% of the DIFFICULT / complex parts for itself.
+# 4. Each sub-agent works on ONE task at a time.
+# 5. If agent fails or gets stuck after 3 retries → Claude ESCALATES and finishes it.
+#
+# Status: pending | running | needs_review | done | failed | conflict | escalated
+# difficulty: easy | medium | hard
+# retry_count: auto-incremented by orchestrator
+# escalated: true = Claude is now doing this task directly
+# owner: "opencode" | "cursor" | "hermes" | "claude"
+
+tasks:
+  - id: T-001
+    title: "Implement proper error handling in AuthManager"
+    assigned_to: opencode
+    workdir: ../work-opencode
+    branch: task/opencode-1
+    status: pending
+    priority: high
+    difficulty: medium
+    retry_count: 0
+    escalated: false
+    owner: "opencode"
+    claude_responsibility: "Design the error strategy + review final implementation"
+    agent_responsibility: "Implement try/catch blocks and user-friendly messages"
+    notes: "Good candidate to split. Claude does architecture, agent codes."
+
+  - id: T-002
+    title: "Fix mobile navigation overflow and responsive issues in MainActivity"
+    assigned_to: cursor
+    workdir: ../work-cursor
+    branch: task/cursor-1
+    status: pending
+    priority: medium
+    difficulty: easy
+    retry_count: 0
+    escalated: false
+    owner: "cursor"
+    claude_responsibility: "Define the layout constraints and acceptance criteria"
+    agent_responsibility: "Fix XML + Kotlin layout code"
+    notes: "Long but relatively easy UI task → good for sub-agent."
+
+  - id: T-003
+    title: "Add end-to-end encryption verification tests for ChatManager"
+    assigned_to: opencode
+    workdir: ../work-opencode
+    branch: task/opencode-1
+    status: pending
+    priority: high
+    difficulty: hard
+    retry_count: 0
+    escalated: false
+    owner: "opencode"
+    claude_responsibility: "Write the core test strategy + 40% of complex test cases"
+    agent_responsibility: "Implement the remaining test cases and fixtures"
+    notes: "Hard task. Claude should keep ~40% for itself."
+
+  - id: T-004
+    title: "Improve Call UI animations and state handling in CallActivity"
+    assigned_to: cursor
+    workdir: ../work-cursor
+    branch: task/cursor-1
+    status: pending
+    priority: medium
+    difficulty: easy
+    retry_count: 0
+    escalated: false
+    owner: "cursor"
+    claude_responsibility: "Specify animation states and edge cases"
+    agent_responsibility: "Implement animations + state machine"
+    notes: "Long but easy UI polish work."
+
+  - id: T-005
+    title: "Add Tailscale connection status indicator to SettingsFragment"
+    assigned_to: opencode
+    workdir: ../work-opencode
+    branch: task/opencode-1
+    status: pending
+    priority: low
+    difficulty: medium
+    retry_count: 0
+    escalated: false
+    owner: "opencode"
+    claude_responsibility: "Design the state machine and Tailscale integration points"
+    agent_responsibility: "Implement the UI indicator and observer"
+    notes: ""
+
+  - id: T-006
+    title: "Add comprehensive logging and crash reporting utilities"
+    assigned_to: hermes
+    workdir: ../work-hermes
+    branch: task/hermes-1
+    status: pending
+    priority: medium
+    difficulty: medium
+    retry_count: 0
+    escalated: false
+    owner: "hermes"
+    claude_responsibility: "Define logging levels + critical paths"
+    agent_responsibility: "Build LogUtils and integrate everywhere"
+    notes: ""
+
+  - id: T-007
+    title: "Implement QR code deep linking for instant friend addition"
+    assigned_to: cursor
+    workdir: ../work-cursor
+    branch: task/cursor-1
+    status: pending
+    priority: high
+    difficulty: hard
+    retry_count: 0
+    escalated: false
+    owner: "cursor"
+    claude_responsibility: "Design the deep link flow + security checks (40%)"
+    agent_responsibility: "Implement the rest of the flow"
+    notes: "Complex task. Claude keeps the hard parts."
+
+  - id: T-008
+    title: "Add support for sending voice messages in chat"
+    assigned_to: opencode
+    workdir: ../work-opencode
+    branch: task/opencode-1
+    status: pending
+    priority: medium
+    difficulty: medium
+    retry_count: 0
+    escalated: false
+    owner: "opencode"
+    claude_responsibility: "Audio pipeline design + encryption integration"
+    agent_responsibility: "Recording UI + message serialization"
+    notes: ""
+
+tasks_metadata:
+  last_updated: "2026-07-20"
+  orchestrator_version: "2.0.0-hybrid"
+  model: "hybrid-orchestrator"
+  active_agents:
+    - opencode
+    - cursor
+    - hermes
+  max_concurrent: 3
+  max_retries_per_agent: 3
+  claude_difficulty_share: "30-40%"
+  main_branch: "main"
+  repo_root: "/home/user/Altron"
+  escalation_policy: "After 3 failed retries or explicit 'stuck' detection, set escalated=true and assign to claude"

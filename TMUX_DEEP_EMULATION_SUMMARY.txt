@@ -1,0 +1,52 @@
+=== DEEP TMUX EMULATION FOR STAR FEATURES (Item 2) ===
+
+Implemented full STAR-style workspace multiplexing using real tmux.
+
+WHAT WAS ADDED:
+
+1. Core Libraries
+   - orchestrator-mcp/tmux-manager.js
+     Full control: sessions, windows, splits, capture, send-keys, focus, kill
+   - orchestrator-mcp/tmux-integration.js
+     Merges live tmux state with workspaces.yaml + notifications
+
+2. New MCP Tools (8 tools)
+   - tmux_get_status
+   - tmux_list_workspaces          (best "sidebar" view)
+   - tmux_create_workspace
+   - tmux_launch_agent             (launch inside real tmux pane)
+   - tmux_send
+   - tmux_capture
+   - tmux_split
+   - tmux_focus
+
+3. Enhanced dispatch_task
+   - Now supports `use_tmux: true`
+   - When true, agent runs inside a dedicated tmux window
+
+4. Helper Scripts
+   - scripts/star/tmux/start-orchestrator-tmux.sh
+   - scripts/star/tmux/create-workspace.sh
+
+5. Documentation
+   - STAR_TMUX_DEEP_EMULATION.md
+   - Updated CLAUDE.md
+
+BEHAVIOR:
+- If tmux is installed → full multiplexing (windows, splits, capture, etc.)
+- If tmux is NOT installed → graceful fallback to normal process mode
+- All other star features (notifications, browser, workspaces.yaml) remain available
+
+HOW CLAUDE USES IT:
+list_tasks()
+tmux_get_status()
+tmux_list_workspaces()
+dispatch_task(..., use_tmux: true)
+tmux_capture(task_id, worker)
+tmux_split(...)
+tmux_focus(...)
+
+This is the deepest possible emulation of star's terminal multiplexing
+in a headless/Linux environment.
+
+Status: COMPLETE

@@ -74,3 +74,24 @@ crashlytics-build.properties
 
 # Tailscale
 .tailscale/
+
+# Node / Orchestrator skill (do not commit heavy or generated)
+node_modules/
+package-lock.json
+
+# Skill generated / temp
+.star-notifications.json
+*.zip
+*.tar.gz
+
+# Keep the important config and source for the skill
+!orchestrator-mcp/
+!scripts/
+!skills/
+!star.json
+!tasks.yaml
+!workspaces.yaml
+!.mcp.json
+!CLAUDE.md
+!STAR_*.md
+!*.sh

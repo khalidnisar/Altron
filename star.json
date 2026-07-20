@@ -1,0 +1,43 @@
+{
+  "name": "Altron",
+  "description": "Secure Communication App - Hybrid Orchestrator with STAR-style features",
+  "version": "2.1.0",
+  "workspaces": {
+    "default_layout": "vertical",
+    "auto_detect_ports": true,
+    "show_git_branch": true,
+    "show_notifications": true
+  },
+  "custom_commands": {
+    "test-all": "npm test && ./gradlew test",
+    "lint": "ktlint && eslint .",
+    "orchestrate": "claude --mcp-config .mcp.json",
+    "notify-test": "node orchestrator-mcp/star-notify.js --message 'Test notification'"
+  },
+  "notifications": {
+    "osc_support": true,
+    "ring_on_waiting": true,
+    "max_unread": 20
+  },
+  "browser": {
+    "default_width": 1280,
+    "default_height": 800,
+    "headless": false,
+    "devtools": false
+  },
+  "agents": {
+    "supported": ["opencode", "cursor", "hermes", "claude"],
+    "notification_patterns": [
+      "waiting for input",
+      "needs your attention",
+      "done",
+      "error",
+      "stuck"
+    ]
+  },
+  "hooks": {
+    "post_dispatch": "scripts/star/hooks/post-dispatch.sh",
+    "on_agent_waiting": "scripts/star/hooks/on-agent-waiting.sh",
+    "on_escalate": "scripts/star/hooks/on-escalate.sh"
+  }
+}

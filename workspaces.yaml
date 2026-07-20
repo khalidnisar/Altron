@@ -1,0 +1,50 @@
+# star-style Workspaces (Altron Hybrid Orchestrator)
+# This file acts as the "sidebar" data source for Claude.
+# Updated automatically by the orchestrator MCP and hooks.
+
+workspaces:
+  - id: ws-opencode-1
+    task_id: T-001
+    name: "Auth Error Handling"
+    workdir: "../work-opencode"
+    branch: "task/opencode-1"
+    owner: "opencode"
+    git_status: "clean"
+    listening_ports: []
+    last_notification: null
+    notification_count: 0
+    status: "pending"
+    split: "vertical"
+
+  - id: ws-cursor-1
+    task_id: T-002
+    name: "Mobile Nav Overflow"
+    workdir: "../work-cursor"
+    branch: "task/cursor-1"
+    owner: "cursor"
+    git_status: "clean"
+    listening_ports: []
+    last_notification: null
+    notification_count: 0
+    status: "pending"
+    split: "vertical"
+
+  - id: ws-hermes-1
+    task_id: T-006
+    name: "Logging & Crash Reporting"
+    workdir: "../work-hermes"
+    branch: "task/hermes-1"
+    owner: "hermes"
+    git_status: "clean"
+    listening_ports: []
+    last_notification: null
+    notification_count: 0
+    status: "pending"
+    split: "horizontal"
+
+metadata:
+  last_updated: "2026-07-20"
+  active_workspace: null
+  notification_unread: 0
+  layout: "vertical"   # vertical | horizontal | grid
+  theme: "ghostty"     # for future compatibility

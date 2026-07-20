@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "altron-orchestrator": {
+      "command": "node",
+      "args": [
+        "/home/user/Altron/orchestrator-mcp/index.js"
+      ],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    }
+  }
+}

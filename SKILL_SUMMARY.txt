@@ -1,0 +1,52 @@
+Claude Code Skill: Multi-Agent Orchestrator
+==========================================
+
+Created: 2026-07-20
+
+This is a complete, self-contained implementation of the 
+"Orchestrating Multiple Coding Agents with Claude as the Manager" pattern.
+
+CORE FILES
+----------
+tasks.yaml                          # Project board (read/write by Claude)
+CLAUDE.md                           # Orchestrator system instructions
+.mcp.json                           # MCP server registration
+orchestrator-mcp/index.js           # Full MCP server (8 tools)
+orchestrator-mcp/package.json
+
+DOCUMENTATION
+-------------
+SKILL_CLAUDE_ORCHESTRATOR.md
+skills/claude-orchestrator/README.md
+skills/claude-orchestrator/EXAMPLE_USAGE.md
+
+SCRIPTS
+-------
+scripts/setup-orchestrator.sh       # One-time setup
+scripts/status.sh
+
+GIT WORKTREES (ready)
+---------------------
+/home/user/work-opencode   (task/opencode-1)
+/home/user/work-cursor     (task/cursor-1)
+/home/user/work-hermes     (task/hermes-1)
+
+MCP TOOLS EXPOSED TO CLAUDE
+---------------------------
+list_tasks
+get_task
+dispatch_task
+check_status
+get_full_diff
+run_tests
+update_task_status
+create_worktree
+
+USAGE
+-----
+1. ./scripts/setup-orchestrator.sh   (already run)
+2. Restart Claude Code
+3. Open /home/user/Altron
+4. Prompt: "You are the orchestrator. Read tasks.yaml and start dispatching."
+
+All guardrails, isolation via worktrees, and review flow are implemented.

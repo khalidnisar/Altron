@@ -1,0 +1,90 @@
+#!/usr/bin/env node
+/**
+ * STAR-style Scriptable Browser Controller
+ * Uses Playwright (headless or headed)
+ *
+ * Exposes functions used by the MCP server.
+ */
+
+import { chromium } from 'playwright';
+import fs from 'fs-extra';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const REPO_ROOT = path.resolve(__dirname, '..');
+
+let browser = null;
+let context = null;
+let page = null;
+let currentUrl = null;
+
+export async function launchBrowser(options = {}) {
+  const { headless = false, width = 1280, height = 800 } = options;
+  
+  if (!browser) {
+    browser = await chromium.launch({ headless });
+    context = await browser.newContext({
+      viewport: { width, height },
+    });
+    page = await context.newPage();
+  }
+  return { success: true, headless };
+}
+
+export async function navigate(url) {
+  if (!page) await launchBrowser();
+  await page.goto(url, { waitUntil: 'domcontentloaded' });
+  currentUrl = url;
+  return { url: page.url(), title: await page.title() };
+}
+
+export async function getCurrentState() {
+  if (!page) return { active: false };
+  return {
+    active: true,
+    url: page.url(),
+    title: await page.title(),
+    currentUrl
+  };
+}
+
+export async function click(selector) {
+  if (!page) throw new Error('Browser not launched');
+  await page.click(selector);
+  return { action: 'click', selector };
+}
+
+export async function fill(selector, value) {
+  if (!page) throw new Error('Browser not launched');
+  await page.fill(selector, value);
+  return { action: 'fill', selector };
+}
+
+export async function evaluate(script) {
+  if (!page) throw new Error('Browser not launched');
+  const result = await page.evaluate(script);
+  return { result };
+}
+
+export async function screenshot(path = '/tmp/star-browser.png') {
+  if (!page) throw new Error('Browser not launched');
+  await page.screenshot({ path, fullPage: true });
+  return { path };
+}
+
+export async function closeBrowser() {
+  if (browser) {
+    await browser.close();
+    browser = context = page = null;
+    currentUrl = null;
+  }
+  return { closed: true };
+}
+
+// Convenience: open a dev server port
+export async function openDevServer(port = 3000, path = '/') {
+  const url = `http://localhost:${port}${path}`;
+  return navigate(url);
+}
