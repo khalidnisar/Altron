@@ -17,14 +17,14 @@ fi
 echo ""
 
 echo "MCP Server package:"
-if [ -d orchestrator-mcp/node_modules ]; then
+if [ -d skills/claude-orchestrator/assets/orchestrator-mcp/node_modules ]; then
     echo "✅ orchestrator-mcp installed"
 else
-    echo "❌ Run: cd orchestrator-mcp && npm install"
+    echo "❌ Run: cd skills/claude-orchestrator/assets/orchestrator-mcp && npm install"
 fi
 echo ""
 
 echo "To start manual MCP test:"
-echo "  node orchestrator-mcp/index.js"
+echo "  node skills/claude-orchestrator/assets/orchestrator-mcp/index.js"
 echo ""
 echo "In Claude Code, the tools should be available after restart."

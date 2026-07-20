@@ -34,8 +34,8 @@ fi
 echo ""
 
 echo "MCP server has star tools:"
-grep -o '"[^"]*browser[^"]*"' orchestrator-mcp/index.js | head -5 || echo "  (check index.js)"
+grep -o '"[^"]*browser[^"]*"' skills/claude-orchestrator/assets/orchestrator-mcp/index.js | head -5 || echo "  (check index.js)"
 
 echo ""
-echo "To test browser: node orchestrator-mcp/star-browser.js"
-echo "To send notify: node orchestrator-mcp/star-notify.js --message 'test'"
+echo "To test browser: node skills/claude-orchestrator/assets/orchestrator-mcp/star-browser.js"
+echo "To send notify: node skills/claude-orchestrator/assets/orchestrator-mcp/star-notify.js --message 'test'"

@@ -27,7 +27,7 @@ tmux split-window -v -t "$SESSION:orchestrator" -p 25
 
 # Set up panes
 tmux send-keys -t "$SESSION:orchestrator.0" 'echo "=== Altron Orchestrator (Main) ==="' C-m
-tmux send-keys -t "$SESSION:orchestrator.1" 'watch -n 3 "node -e \"const m=require(\\\"./orchestrator-mcp/tmux-integration.js\\\"); console.log(JSON.stringify(m.getTmuxStatus(),null,2))\" 2>/dev/null || echo \"tmux status\"" ' C-m
+tmux send-keys -t "$SESSION:orchestrator.1" 'watch -n 3 "node -e \"const m=require(\\\"./skills/claude-orchestrator/assets/orchestrator-mcp/tmux-integration.js\\\"); console.log(JSON.stringify(m.getTmuxStatus(),null,2))\" 2>/dev/null || echo \"tmux status\"" ' C-m
 tmux send-keys -t "$SESSION:orchestrator.2" 'tail -f .star-notifications.json 2>/dev/null || echo "No notifications yet"' C-m
 
 tmux select-pane -t "$SESSION:orchestrator.0"

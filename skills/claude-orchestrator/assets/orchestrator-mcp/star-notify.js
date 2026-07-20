@@ -12,12 +12,11 @@
 
 import fs from 'fs-extra';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const REPO_ROOT = path.resolve(__dirname, '..');
+// CLI runs from anywhere inside the project; root = cwd unless overridden.
+const REPO_ROOT = process.env.ORCHESTRATOR_ROOT
+  ? path.resolve(process.env.ORCHESTRATOR_ROOT)
+  : process.cwd();
 const NOTIFICATIONS_FILE = path.join(REPO_ROOT, '.star-notifications.json');
 const WORKSPACES_FILE = path.join(REPO_ROOT, 'workspaces.yaml');
 

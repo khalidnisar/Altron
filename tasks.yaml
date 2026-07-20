@@ -146,5 +146,4 @@ tasks_metadata:
   max_retries_per_agent: 3
   claude_difficulty_share: "30-40%"
   main_branch: "main"
-  repo_root: "/home/user/Altron"
   escalation_policy: "After 3 failed retries or explicit 'stuck' detection, set escalated=true and assign to claude"

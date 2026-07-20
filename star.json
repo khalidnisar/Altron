@@ -12,7 +12,7 @@
     "test-all": "npm test && ./gradlew test",
     "lint": "ktlint && eslint .",
     "orchestrate": "claude --mcp-config .mcp.json",
-    "notify-test": "node orchestrator-mcp/star-notify.js --message 'Test notification'"
+    "notify-test": "node skills/claude-orchestrator/assets/orchestrator-mcp/star-notify.js --message 'Test notification'"
   },
   "notifications": {
     "osc_support": true,

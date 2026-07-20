@@ -6,11 +6,12 @@
 import tmuxManager from './tmux-manager.js';
 import fs from 'fs-extra';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import yaml from 'js-yaml';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const REPO_ROOT = path.resolve(__dirname, '..');
+// Project root = cwd (Claude Code launches MCP servers at the project root).
+const REPO_ROOT = process.env.ORCHESTRATOR_ROOT
+  ? path.resolve(process.env.ORCHESTRATOR_ROOT)
+  : process.cwd();
 
 const WORKSPACES_FILE = path.join(REPO_ROOT, 'workspaces.yaml');
 
@@ -59,24 +60,12 @@ export function getEnhancedWorkspaces() {
   return base;
 }
 
-function parseSimpleWorkspaces(yaml) {
-  const workspaces = [];
-  const lines = yaml.split('\n');
-  let current = null;
-  for (const line of lines) {
-    const t = line.trim();
-    if (t.startsWith('- id:')) {
-      if (current) workspaces.push(current);
-      current = {};
-      const m = t.match(/id:\s*(\S+)/);
-      if (m) current.id = m[1];
-    } else if (current) {
-      const m = t.match(/^(\w+):\s*(.+)$/);
-      if (m) current[m[1]] = m[2].replace(/^["']|["']$/g, '');
-    }
-  }
-  if (current) workspaces.push(current);
-  return { workspaces, metadata: {} };
+function parseSimpleWorkspaces(content) {
+  const doc = yaml.load(content) || {};
+  return {
+    workspaces: Array.isArray(doc.workspaces) ? doc.workspaces : [],
+    metadata: doc.metadata || {},
+  };
 }
 
 export function launchInTmux(taskId, worker, prompt, workdir) {

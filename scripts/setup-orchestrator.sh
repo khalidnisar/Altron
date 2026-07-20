@@ -1,42 +1,33 @@
 #!/usr/bin/env bash
-# Altron Orchestrator Skill - One-time Setup Script
-# Run from the Altron root directory
+# Claude Orchestrator Skill - One-time Setup Script
+# Run from the project root directory (any machine — no hardcoded paths)
 
 set -euo pipefail
 
-echo "🚀 Setting up Altron Claude Orchestrator Skill..."
+echo "🚀 Setting up Claude Orchestrator Skill..."
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
+MCP_DIR="$REPO_ROOT/skills/claude-orchestrator/assets/orchestrator-mcp"
 
-# 1. Ensure worktrees exist
+# 1. Ensure worktrees exist (siblings of the repo root)
 echo "📁 Ensuring git worktrees..."
 git worktree list
 
-# Create any missing worktrees
-if [ ! -d "/home/user/work-opencode" ]; then
-    echo "Creating work-opencode..."
-    git worktree add /home/user/work-opencode -b task/opencode-1 || true
-fi
-
-if [ ! -d "/home/user/work-cursor" ]; then
-    echo "Creating work-cursor..."
-    git worktree add /home/user/work-cursor -b task/cursor-1 || true
-fi
-
-if [ ! -d "/home/user/work-hermes" ]; then
-    echo "Creating work-hermes..."
-    git worktree add /home/user/work-hermes -b task/hermes-1 || true
-fi
+for worker in opencode cursor hermes; do
+    WT="$REPO_ROOT/../work-$worker"
+    if [ ! -d "$WT" ]; then
+        echo "Creating work-$worker..."
+        git worktree add "$WT" -b "task/$worker-1" || true
+    fi
+done
 
 # 2. Install MCP server dependencies
 echo "📦 Installing orchestrator-mcp dependencies..."
-cd orchestrator-mcp
-npm install
-cd "$REPO_ROOT"
+(cd "$MCP_DIR" && npm install)
 
 # 3. Make scripts executable
-chmod +x scripts/*.sh 2>/dev/null || true
+chmod +x scripts/*.sh scripts/star/hooks/*.sh scripts/star/tmux/*.sh 2>/dev/null || true
 
 # 4. Verify tasks.yaml
 echo "📋 Verifying tasks.yaml..."
@@ -55,9 +46,9 @@ else
     cat > .mcp.json << 'EOF'
 {
   "mcpServers": {
-    "altron-orchestrator": {
+    "claude-orchestrator": {
       "command": "node",
-      "args": ["/home/user/Altron/orchestrator-mcp/index.js"]
+      "args": ["skills/claude-orchestrator/assets/orchestrator-mcp/index.js"]
     }
   }
 }
@@ -70,13 +61,13 @@ echo "✅ Setup complete!"
 echo ""
 echo "Next steps:"
 echo "  1. Restart Claude Code (or Claude Desktop) completely"
-echo "  2. Open the Altron project"
+echo "  2. Open this project"
 echo "  3. Tell Claude: \"You are the orchestrator. Read tasks.yaml and start working.\""
 echo ""
 echo "Useful commands:"
 echo "  git worktree list"
 echo "  cat tasks.yaml"
-echo "  node orchestrator-mcp/index.js   # (test MCP server manually)"
+echo "  node \"$MCP_DIR/index.js\"   # (test MCP server manually — run from project root)"
 echo ""
 echo "To add a new worktree later:"
 echo "  git worktree add ../work-opencode-2 -b task/opencode-2"

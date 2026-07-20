@@ -6,24 +6,32 @@
  * Exposes functions used by the MCP server.
  */
 
-import { chromium } from 'playwright';
-import fs from 'fs-extra';
+import os from 'os';
 import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const REPO_ROOT = path.resolve(__dirname, '..');
 
 let browser = null;
 let context = null;
 let page = null;
 let currentUrl = null;
 
+// Playwright is an optional dependency — load lazily with a clear error
+// instead of crashing every browser tool at import time.
+async function getChromium() {
+  try {
+    const { chromium } = await import('playwright');
+    return chromium;
+  } catch {
+    throw new Error(
+      "Playwright is not installed. Run 'npm install playwright && npx playwright install chromium' in the orchestrator-mcp directory to enable browser tools."
+    );
+  }
+}
+
 export async function launchBrowser(options = {}) {
   const { headless = false, width = 1280, height = 800 } = options;
-  
+
   if (!browser) {
+    const chromium = await getChromium();
     browser = await chromium.launch({ headless });
     context = await browser.newContext({
       viewport: { width, height },
@@ -68,10 +76,10 @@ export async function evaluate(script) {
   return { result };
 }
 
-export async function screenshot(path = '/tmp/star-browser.png') {
+export async function screenshot(outPath = path.join(os.tmpdir(), 'star-browser.png')) {
   if (!page) throw new Error('Browser not launched');
-  await page.screenshot({ path, fullPage: true });
-  return { path };
+  await page.screenshot({ path: outPath, fullPage: true });
+  return { path: outPath };
 }
 
 export async function closeBrowser() {
@@ -84,7 +92,7 @@ export async function closeBrowser() {
 }
 
 // Convenience: open a dev server port
-export async function openDevServer(port = 3000, path = '/') {
-  const url = `http://localhost:${port}${path}`;
+export async function openDevServer(port = 3000, urlPath = '/') {
+  const url = `http://localhost:${port}${urlPath}`;
   return navigate(url);
 }

@@ -2,206 +2,120 @@
 
 **Orchestrating Multiple Coding Agents with Claude as the "Manager"**
 
-This is a complete, production-ready implementation of the **Orchestrator → Worker** pattern for Claude Code.
+A self-contained Claude Code skill implementing the **Hybrid Orchestrator → Worker**
+pattern: Claude plans every task, keeps the difficult ~30-40% for itself,
+dispatches the long-but-easy ~60-70% to headless coding agents in isolated git
+worktrees, monitors progress, and escalates (takes over) after 3 failed retries.
 
-Claude acts purely as the **project manager**. It never writes code itself. Instead it:
+```
+skills/claude-orchestrator/
+├── SKILL.md                       ← skill entry point (Claude loads this)
+├── README.md                      ← this file (for humans)
+├── references/
+│   ├── mcp-tools.md               ← full MCP tool reference + tasks.yaml schema
+│   └── example-usage.md           ← worked end-to-end session
+└── assets/
+    └── orchestrator-mcp/          ← the MCP server (Node 18+, 25+ tools)
+```
 
-- Breaks down work using `tasks.yaml`
-- Dispatches tasks to isolated headless coding agents (`opencode`, `cursor-agent`, `hermes`, etc.)
-- Monitors progress via logs and git diffs
-- Reviews output before recommending merges
+## Install as a global skill
 
----
+```bash
+# Copy the whole folder into your Claude Code skills directory:
+#   Linux/macOS:  ~/.claude/skills/claude-orchestrator
+#   Windows:      %USERPROFILE%\.claude\skills\claude-orchestrator
+cd ~/.claude/skills/claude-orchestrator/assets/orchestrator-mcp
+npm install
+```
 
-## What's Included
+## Wire it into a project
 
-| File/Folder                        | Purpose |
-|------------------------------------|--------|
-| `tasks.yaml` (root)                | Single source of truth project board |
-| `orchestrator-mcp/`                | Full MCP server exposing orchestration tools |
-| `.mcp.json`                        | Claude Code registration for the MCP server |
-| `CLAUDE.md`                        | System instructions for Claude (the orchestrator) |
-| `skills/claude-orchestrator/`      | This skill documentation + helpers |
-| `scripts/`                         | Utility scripts (setup, monitor, etc.) |
+Add to the project's `.mcp.json` (create if missing):
 
----
+```json
+{
+  "mcpServers": {
+    "claude-orchestrator": {
+      "command": "node",
+      "args": ["<absolute-or-relative-path>/orchestrator-mcp/index.js"]
+    }
+  }
+}
+```
+
+The server reads `tasks.yaml`, `star.json`, and `workspaces.yaml` from its
+**working directory** (Claude Code launches MCP servers at the project root).
+Running it manually from elsewhere? Set `ORCHESTRATOR_ROOT=/path/to/project`.
+
+Then create the task board and worktrees:
+
+```bash
+# starter board — full schema in references/mcp-tools.md
+$EDITOR tasks.yaml
+git worktree add ../work-opencode -b task/opencode-1
+```
+
+Restart Claude Code and say:
+
+> "You are the orchestrator. Read the current tasks and start working on them."
 
 ## Prerequisites
 
 - Claude Code (or Claude Desktop with MCP support)
-- Node.js 18+ (for the MCP server)
-- Git (worktrees support)
-- One or more headless coding agents:
-  - `opencode` (recommended)
-  - `cursor-agent`
-  - `aider` (as hermes fallback)
-  - or any CLI that accepts a prompt and exits
+- Node.js 18+ and git
+- One or more headless agent CLIs on PATH: `opencode`, `cursor-agent`,
+  `aider`, or any CLI that accepts a prompt and exits. No agent installed?
+  Use the built-in `echo` tool for dry runs.
+- Optional: `tmux` (Linux/macOS) for multiplexed agent windows; `playwright`
+  for the scriptable browser tools.
 
----
+Works on Windows: the server auto-detects the platform (gradlew.bat, cmd
+shims, no tmux → graceful fallback to detached-process mode).
 
-## Quick Setup (One-Time)
+## Guardrails (built in)
 
-```bash
-cd /home/user/Altron
-
-# 1. Install MCP server dependencies
-cd orchestrator-mcp
-npm install
-
-# 2. Make sure worktrees exist (already created)
-git worktree list
-
-# 3. (Optional) Test the MCP server directly
-node orchestrator-mcp/index.js
-# (it should print startup message to stderr and wait)
-
-# 4. Register with Claude Code (if not already)
-# Claude Code will automatically pick up .mcp.json in project root
-```
-
-**Restart Claude Code** after the first setup so it loads the new MCP server.
-
----
-
-## How to Use (The Orchestration Loop)
-
-### 1. Start a new Claude Code session on the Altron project
-
-Claude will automatically load:
-- `CLAUDE.md` (orchestrator rules)
-- The MCP tools via `.mcp.json`
-
-### 2. Tell Claude:
-
-> "You are the orchestrator. Read the current tasks and start working on them."
-
-Or be more specific:
-
-> "List all tasks, then dispatch T-001 using opencode"
-
-### 3. Claude will:
-
-1. Call `list_tasks()`
-2. Call `dispatch_task(...)`
-3. Periodically call `check_status(...)`
-4. When done: `get_full_diff(...)` + `run_tests(...)`
-5. Update status to `needs_review`
-6. Present you with a summary + diff for approval
-
-### 4. Human Review & Merge
-
-When Claude says a task is ready:
-
-```bash
-# Example merge flow (Claude will tell you the exact commands)
-git checkout main
-git merge task/opencode-1 --no-ff
-git branch -d task/opencode-1
-git worktree remove ../work-opencode
-```
-
----
-
-## MCP Tools Reference (Available to Claude)
-
-| Tool                | Description |
-|---------------------|-----------|
-| `list_tasks`        | Read entire `tasks.yaml` board |
-| `get_task`          | Get one task by ID |
-| `dispatch_task`     | Launch a worker agent in a worktree |
-| `check_status`      | Get log tail + git diff --stat |
-| `get_full_diff`     | Full unified diff of worker changes |
-| `run_tests`         | Run tests inside the worktree |
-| `update_task_status`| Change status + add notes |
-| `create_worktree`   | Create new isolated worktree + branch |
-
----
-
-## Architecture
-
-```
-Claude Code (Orchestrator)
-        │
-        ▼
-   MCP Tools (orchestrator-mcp/index.js)
-        │
-        ├─→ opencode run "..."   (in ../work-opencode)
-        ├─→ cursor-agent -p "..." (in ../work-cursor)
-        └─→ hermes ...           (in ../work-hermes)
-        │
-   Each worker only touches its own branch/worktree
-        │
-   Claude inspects via:
-        - .agent-log.txt
-        - git diff
-        - test output
-```
-
----
-
-## Adding a New Worker Tool
-
-Edit `orchestrator-mcp/index.js`:
-
-```js
-const TOOL_CMDS = {
-  opencode: (prompt, cwd) => ({ cmd: "opencode", args: ["run", prompt] }),
-  cursor:   (prompt, cwd) => ({ cmd: "cursor-agent", args: ["-p", prompt, "--output-format", "json"] }),
-  mynewagent: (prompt, cwd) => ({ cmd: "my-agent", args: ["--headless", prompt] }),
-  // ...
-};
-```
-
-Then update `CLAUDE.md` to mention the new tool.
-
----
-
-## Background / Unattended Mode (Advanced)
-
-For a true daemon that keeps orchestrating without you:
-
-See `scripts/orchestrator-daemon.py` (Python example that uses the Anthropic API + MCP tools via subprocess).
-
-Or use existing tools:
-- **Claude Squad** (`smtg-ai/claude-squad`)
-- **Vibe Kanban**
-
----
-
-## Guardrails (Built-in)
-
-- Workers are **never** given write access to `main`
-- Every diff must be **reviewed** by Claude + human before merge
-- `tasks.yaml` is the **only** source of truth
-- Concurrency is limited (see `tasks.yaml` → `max_concurrent`)
-- All logs and diffs are inspectable
-
----
-
-## Files You Should Never Edit Manually (Let Claude do it)
-
-- `tasks.yaml` (except when adding new high-level tasks)
-- Any file inside `../work-*` directories
-
----
+- Workers never touch `main` — each works on its own branch in its own worktree
+- Every diff is reviewed by Claude + human before merge; Claude only outputs
+  merge commands, never merges
+- `tasks.yaml` is the single source of truth; `max_concurrent` limits parallelism
+- 3-retry ceiling per agent per task, then automatic escalation to Claude
+- All logs (`.agent-log.txt`), PIDs, and diffs are inspectable
 
 ## Troubleshooting
 
-**MCP server not appearing in Claude?**
-- Restart Claude Code completely
-- Check `claude mcp list` (or `/mcp` command inside Claude)
-- Look at stderr of the server process
+**MCP server not appearing?** Restart Claude Code fully; check `/mcp`; run
+`node assets/orchestrator-mcp/index.js` from the project root and read stderr.
 
-**Agent never finishes?**
-- Check the log: `cat ../work-opencode/.agent-log.txt`
-- Make sure the CLI tool actually exits when done
+**Agent never finishes?** `cat ../work-<agent>/.agent-log.txt`; make sure the
+CLI actually exits when done.
 
-**Merge conflicts?**
-- Claude should have flagged it as `conflict` status
+**Browser tools error?** `npm install playwright && npx playwright install chromium`
+inside `assets/orchestrator-mcp/`.
+
+## Changelog
+
+**2.2.0** (2026-07-20)
+- Proper `SKILL.md` with frontmatter — installable as a real Claude Code skill
+- Self-contained layout: MCP server moved into `assets/orchestrator-mcp/`
+- Portable: project root resolved from cwd/`ORCHESTRATOR_ROOT` (no more
+  hardcoded `/home/user`); Windows support (spawn shims, gradlew.bat, tmpdir)
+- Real YAML parsing (`js-yaml`): hybrid fields (`retry_count`, `owner`,
+  `difficulty`, …) now actually read — fixes retry/escalation never triggering
+- Fixed `send_notification` crash (ESM `require`, wrong export name) and
+  workspace updates matching the wrong entry
+- `plan_task_split` now persists `difficulty` + responsibilities to tasks.yaml
+- Task fields missing from a block are inserted instead of silently dropped
+- `update_task_status` accepts `escalated`; `run_tests` detects project type
+  (gradlew / npm / cargo / pytest) and reports pass/fail
+- tmux commands use `execFileSync` (quoting-safe); prompts shell-escaped
+- Playwright is lazy-loaded with a clear install hint instead of crashing
+- Hooks no longer append raw lines to `workspaces.yaml` (YAML corruption)
+
+**2.1.0** — STAR-style workspaces, notifications, browser, tmux deep emulation
+**2.0.0** — Hybrid 30/70 model, retries, escalation
+**1.0.0** — Initial orchestrator → worker pattern
 
 ---
 
-**Version**: 1.0.0  
-**Created**: 2026-07-20  
-**Project**: Altron  
-**Pattern**: Orchestrator → Worker (MCP + Git Worktrees)
+**Pattern**: Hybrid Orchestrator → Worker (MCP + Git Worktrees)
+**Author**: Khalid Nisar

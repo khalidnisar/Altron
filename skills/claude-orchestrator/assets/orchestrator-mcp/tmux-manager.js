@@ -10,36 +10,45 @@
  * When tmux is not available, falls back to simple process tracking.
  */
 
-import { execSync, spawn } from 'child_process';
+import { execSync, execFileSync } from 'child_process';
 import fs from 'fs-extra';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const REPO_ROOT = path.resolve(__dirname, '..');
+// Project root = cwd (Claude Code launches MCP servers at the project root).
+const REPO_ROOT = process.env.ORCHESTRATOR_ROOT
+  ? path.resolve(process.env.ORCHESTRATOR_ROOT)
+  : process.cwd();
 
-const TMUX_SESSION = process.env.ALTRON_TMUX_SESSION || 'altron-orchestrator';
+const TMUX_SESSION = process.env.ORCHESTRATOR_TMUX_SESSION || process.env.ALTRON_TMUX_SESSION || 'claude-orchestrator';
 const TMUX_BIN = 'tmux';
 
+let tmuxChecked = null;
 function tmuxAvailable() {
+  if (tmuxChecked !== null) return tmuxChecked;
   try {
     execSync(`${TMUX_BIN} -V`, { stdio: 'ignore' });
-    return true;
+    tmuxChecked = true;
   } catch {
-    return false;
+    tmuxChecked = false;
   }
+  return tmuxChecked;
 }
 
 function runTmux(args, options = {}) {
   if (!tmuxAvailable()) {
     throw new Error('tmux is not installed on this system');
   }
-  const cmd = [TMUX_BIN, ...args];
-  return execSync(cmd.join(' '), {
+  // execFileSync: args passed as an array — no shell re-parsing, so titles,
+  // banners, and prompts containing spaces or quotes survive intact.
+  return execFileSync(TMUX_BIN, args, {
     encoding: 'utf8',
     ...options,
   }).trim();
+}
+
+// POSIX single-quote escaping for commands sent into tmux panes.
+function shq(str) {
+  return `'${String(str).replace(/'/g, `'\\''`)}'`;
 }
 
 function safeSessionName(name) {
@@ -273,12 +282,12 @@ export function getTmuxStatus(session = TMUX_SESSION) {
 export function launchAgentInTmux(taskId, worker, prompt, workdir, session = TMUX_SESSION) {
   const ws = createWorkspace(taskId, worker, workdir, session);
 
-  // Build the actual command the agent would run
+  // Build the actual command the agent would run (prompt safely quoted)
   let agentCmd = '';
-  if (worker === 'opencode') agentCmd = `opencode run "${prompt}"`;
-  else if (worker === 'cursor') agentCmd = `cursor-agent -p "${prompt}" --output-format json`;
-  else if (worker === 'hermes') agentCmd = `hermes --headless --prompt "${prompt}"`;
-  else agentCmd = `echo '[AGENT] ${worker} would run: ${prompt}'`;
+  if (worker === 'opencode') agentCmd = `opencode run ${shq(prompt)}`;
+  else if (worker === 'cursor') agentCmd = `cursor-agent -p ${shq(prompt)} --output-format json`;
+  else if (worker === 'hermes') agentCmd = `hermes --headless --prompt ${shq(prompt)}`;
+  else agentCmd = `echo ${shq(`[AGENT] ${worker} would run: ${prompt}`)}`;
 
   // Send the command into the pane
   sendToWorkspace(taskId, worker, agentCmd, session);

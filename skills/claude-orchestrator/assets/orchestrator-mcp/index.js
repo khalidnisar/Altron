@@ -29,6 +29,7 @@ import { z } from "zod";
 import { spawn, execSync } from "child_process";
 import fs from "fs-extra";
 import path from "path";
+import yaml from "js-yaml";
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -38,9 +39,14 @@ const __dirname = path.dirname(__filename);
 // CONFIGURATION - Customize for your environment
 // ============================================================
 
-const REPO_ROOT = path.resolve(__dirname, ".."); // Altron root
+// Project root = where tasks.yaml / star.json / workspaces.yaml live.
+// Claude Code launches MCP servers with cwd = project root, so cwd is the
+// right default. Override with ORCHESTRATOR_ROOT when running manually.
+const REPO_ROOT = process.env.ORCHESTRATOR_ROOT
+  ? path.resolve(process.env.ORCHESTRATOR_ROOT)
+  : process.cwd();
 const TASKS_FILE = path.join(REPO_ROOT, "tasks.yaml");
-const WORKTREES_BASE = "/home/user"; // where work-* dirs live
+const IS_WINDOWS = process.platform === "win32";
 
 // Map of tool names → CLI command builder
 // Each must be headless / non-interactive
@@ -97,35 +103,20 @@ function updateTasksFile(updater) {
 }
 
 function parseTasksYaml(yamlContent) {
-  // Very lightweight parser for our specific format.
-  // Returns array of task objects.
-  const tasks = [];
-  const lines = yamlContent.split("\n");
-  let current = null;
-  let inTask = false;
+  // Proper YAML parsing (js-yaml). Returns array of task objects with ALL
+  // fields intact — including hybrid fields (retry_count, escalated, owner,
+  // difficulty, claude_responsibility, agent_responsibility).
+  const doc = yaml.load(yamlContent) || {};
+  return Array.isArray(doc.tasks) ? doc.tasks : [];
+}
 
-  for (let line of lines) {
-    const trimmed = line.trim();
-    if (trimmed.startsWith("- id:")) {
-      if (current) tasks.push(current);
-      current = {};
-      inTask = true;
-      const idMatch = trimmed.match(/id:\s*([^\s]+)/);
-      if (idMatch) current.id = idMatch[1];
-    } else if (inTask && current) {
-      const keyMatch = trimmed.match(/^(\w+):\s*(.+)$/);
-      if (keyMatch) {
-        let key = keyMatch[1];
-        let val = keyMatch[2].replace(/^["']|["']$/g, "");
-        // Handle simple lists for active_agents etc at bottom
-        if (key === "assigned_to" || key === "status" || key === "workdir" || key === "branch" || key === "title" || key === "priority" || key === "notes") {
-          current[key] = val;
-        }
-      }
-    }
+function getTasksMetadata() {
+  try {
+    const doc = yaml.load(fs.readFileSync(TASKS_FILE, "utf8")) || {};
+    return doc.tasks_metadata || {};
+  } catch {
+    return {};
   }
-  if (current) tasks.push(current);
-  return tasks;
 }
 
 function getCurrentTasks() {
@@ -173,61 +164,83 @@ function updateTaskStatusInYaml(taskId, newStatus, extraNotes = "") {
   return updated;
 }
 
-// Hybrid-specific: update multiple fields (retry_count, escalated, owner, difficulty)
-function updateHybridTaskFields(taskId, updates = {}) {
-  let content = fs.readFileSync(TASKS_FILE, "utf8");
-  const lines = content.split("\n");
-  let inTask = false;
-  let updated = false;
+// Hybrid-specific: update multiple fields (status, retry_count, escalated,
+// owner, difficulty, responsibilities, notes). Line-based so comments in
+// tasks.yaml survive. Fields missing from the task block get inserted.
+const HYBRID_FIELDS = [
+  "status", "retry_count", "escalated", "owner", "difficulty",
+  "claude_responsibility", "agent_responsibility", "notes",
+];
 
-  const newLines = lines.map((line) => {
+function formatFieldLine(indent, key, value, oldLineTrimmed = "") {
+  if (key === "notes") {
+    const old = oldLineTrimmed.replace("notes:", "").trim().replace(/^["']|["']$/g, "");
+    const combined = old ? `${old} | ${value}` : String(value);
+    return `${indent}notes: "${combined}"`;
+  }
+  if (key === "owner" || key === "claude_responsibility" || key === "agent_responsibility") {
+    return `${indent}${key}: "${String(value).replace(/"/g, "'")}"`;
+  }
+  return `${indent}${key}: ${value}`;
+}
+
+function updateHybridTaskFields(taskId, updates = {}) {
+  const content = fs.readFileSync(TASKS_FILE, "utf8");
+  const lines = content.split("\n");
+  const pending = Object.fromEntries(
+    Object.entries(updates).filter(([k, v]) => HYBRID_FIELDS.includes(k) && v !== undefined)
+  );
+  if (Object.keys(pending).length === 0) return false;
+
+  let inTask = false;
+  let fieldIndent = "    ";
+  let updated = false;
+  const out = [];
+
+  const flushPending = () => {
+    for (const [key, value] of Object.entries(pending)) {
+      out.push(formatFieldLine(fieldIndent, key, value));
+      updated = true;
+      delete pending[key];
+    }
+  };
+
+  for (const line of lines) {
     const trimmed = line.trim();
-    
-    if (trimmed.startsWith("- id:")) {
-      const idMatch = trimmed.match(/id:\s*([T0-9-]+)/);
-      if (idMatch && idMatch[1] === taskId) {
-        inTask = true;
-      } else {
-        inTask = false;
+    const isTaskStart = trimmed.startsWith("- id:");
+    const isMetadataStart = /^tasks_metadata:/.test(trimmed);
+
+    if (isTaskStart || isMetadataStart) {
+      if (inTask) flushPending(); // leaving the target task: insert any missing fields
+      inTask = false;
+      if (isTaskStart) {
+        const idMatch = trimmed.match(/id:\s*([^\s#]+)/);
+        if (idMatch && idMatch[1] === taskId) {
+          inTask = true;
+          fieldIndent = (line.match(/^(\s*)/)[1] || "  ") + "  ";
+        }
+      }
+      out.push(line);
+      continue;
+    }
+
+    if (inTask) {
+      const keyMatch = trimmed.match(/^(\w+):/);
+      const key = keyMatch ? keyMatch[1] : null;
+      if (key && pending[key] !== undefined) {
+        const indent = line.match(/^(\s*)/)[1] || fieldIndent;
+        out.push(formatFieldLine(indent, key, pending[key], trimmed));
+        updated = true;
+        delete pending[key];
+        continue;
       }
     }
-    
-    if (!inTask) return line;
-
-    // Update specific hybrid fields
-    if (updates.status && trimmed.startsWith("status:")) {
-      const indent = line.match(/^(\s*)/)[1] || "  ";
-      updated = true;
-      return `${indent}status: ${updates.status}`;
-    }
-    if (updates.retry_count !== undefined && trimmed.startsWith("retry_count:")) {
-      const indent = line.match(/^(\s*)/)[1] || "  ";
-      updated = true;
-      return `${indent}retry_count: ${updates.retry_count}`;
-    }
-    if (updates.escalated !== undefined && trimmed.startsWith("escalated:")) {
-      const indent = line.match(/^(\s*)/)[1] || "  ";
-      updated = true;
-      return `${indent}escalated: ${updates.escalated}`;
-    }
-    if (updates.owner && trimmed.startsWith("owner:")) {
-      const indent = line.match(/^(\s*)/)[1] || "  ";
-      updated = true;
-      return `${indent}owner: "${updates.owner}"`;
-    }
-    if (updates.notes && trimmed.startsWith("notes:")) {
-      const indent = line.match(/^(\s*)/)[1] || "  ";
-      const old = trimmed.replace("notes:", "").trim().replace(/^["']|["']$/g, "");
-      const combined = old ? `${old} | ${updates.notes}` : updates.notes;
-      updated = true;
-      return `${indent}notes: "${combined}"`;
-    }
-    
-    return line;
-  });
+    out.push(line);
+  }
+  if (inTask) flushPending(); // target task was the last block in the file
 
   if (updated) {
-    fs.writeFileSync(TASKS_FILE, newLines.join("\n"), "utf8");
+    fs.writeFileSync(TASKS_FILE, out.join("\n"), "utf8");
   }
   return updated;
 }
@@ -265,7 +278,10 @@ export function dispatchTask(toolName, prompt, workdir, taskId = null) {
   const child = spawn(cmd, args, {
     cwd,
     stdio: ["ignore", out, err],
-    detached: true,
+    detached: !IS_WINDOWS,
+    // Windows: agent CLIs are usually .cmd shims — they need a shell to resolve.
+    shell: IS_WINDOWS,
+    windowsHide: true,
     env: { ...process.env },
   });
 
@@ -371,26 +387,39 @@ export function getFullDiff(workdir) {
  */
 export function runTests(workdir) {
   const cwd = resolveWorkdir(workdir);
-  try {
-    // Altron is Gradle + Kotlin (Android). Adjust as needed.
-    // Common patterns:
-    const commands = [
-      "cd " + cwd + " && ./gradlew test --quiet 2>&1 || true",
-      "cd " + cwd + " && npm test 2>&1 || true",
-    ];
-
-    let output = "";
-    for (const cmd of commands) {
-      try {
-        output += execSync(cmd, { encoding: "utf8", timeout: 120000 });
-      } catch (e) {
-        output += (e.stdout || "") + (e.stderr || "");
-      }
-    }
-    return { workdir: cwd, output: output.trim() || "No test output" };
-  } catch (e) {
-    return { workdir: cwd, error: e.message, output: "" };
+  // Detect the project type instead of blindly running every test command.
+  // Cross-platform: no `cd X && ...`, no `|| true` (breaks on Windows cmd).
+  const commands = [];
+  if (fs.existsSync(path.join(cwd, IS_WINDOWS ? "gradlew.bat" : "gradlew"))) {
+    commands.push(IS_WINDOWS ? "gradlew.bat test --quiet" : "./gradlew test --quiet");
   }
+  if (fs.existsSync(path.join(cwd, "package.json"))) {
+    try {
+      const pkg = JSON.parse(fs.readFileSync(path.join(cwd, "package.json"), "utf8"));
+      if (pkg.scripts && pkg.scripts.test) commands.push("npm test");
+    } catch {}
+  }
+  if (fs.existsSync(path.join(cwd, "Cargo.toml"))) commands.push("cargo test");
+  if (fs.existsSync(path.join(cwd, "pytest.ini")) || fs.existsSync(path.join(cwd, "pyproject.toml"))) {
+    commands.push("python -m pytest -q");
+  }
+
+  if (commands.length === 0) {
+    return { workdir: cwd, output: "No recognized test setup (gradlew, npm test, cargo, pytest)." };
+  }
+
+  let output = "";
+  let failed = false;
+  for (const cmd of commands) {
+    output += `\n$ ${cmd}\n`;
+    try {
+      output += execSync(cmd, { cwd, encoding: "utf8", timeout: 180000 });
+    } catch (e) {
+      failed = true;
+      output += (e.stdout || "") + (e.stderr || "") + `\n[exit code: ${e.status ?? "?"}]`;
+    }
+  }
+  return { workdir: cwd, passed: !failed, output: output.trim() || "No test output" };
 }
 
 /**
@@ -441,20 +470,22 @@ export function getTask(taskId) {
  */
 export function planTaskSplit(taskId, plan) {
   // plan = { claude_responsibility: "...", agent_responsibility: "...", difficulty: "easy|medium|hard" }
-  const success = updateHybridTaskFields(taskId, {
-    notes: `PLAN: Claude=${plan.claude_responsibility || 'N/A'} | Agent=${plan.agent_responsibility || 'N/A'}`,
-  });
+  const updates = {
+    notes: `PLAN: Claude=${plan.claude_responsibility || "N/A"} | Agent=${plan.agent_responsibility || "N/A"}`,
+  };
+  if (plan.claude_responsibility) updates.claude_responsibility = plan.claude_responsibility;
+  if (plan.agent_responsibility) updates.agent_responsibility = plan.agent_responsibility;
+  if (plan.difficulty) updates.difficulty = plan.difficulty;
 
-  // Also update difficulty if provided
-  if (plan.difficulty) {
-    // Simple append to notes for now (we can improve parser later)
-  }
+  const success = updateHybridTaskFields(taskId, updates);
 
   return {
     success,
     taskId,
     plan,
-    message: "Task split planned. Use this to guide dispatch or direct work."
+    message: success
+      ? "Task split planned and persisted to tasks.yaml."
+      : `Task ${taskId} not found in tasks.yaml — nothing persisted.`,
   };
 }
 
@@ -503,13 +534,13 @@ export function claimTaskForClaude(taskId, responsibility = "") {
  * Helper: Increment retry count for a task
  */
 export function incrementRetry(taskId) {
-  // This is a bit hacky without full YAML lib — we read + patch
   const tasks = getCurrentTasks();
   const task = tasks.find(t => t.id === taskId);
-  if (!task) return false;
+  if (!task) return { error: `Task not found: ${taskId}` };
 
-  const newCount = (task.retry_count || 0) + 1;
-  const shouldEscalate = newCount >= 3;
+  const maxRetries = Number(getTasksMetadata().max_retries_per_agent) || 3;
+  const newCount = Number(task.retry_count || 0) + 1;
+  const shouldEscalate = newCount >= maxRetries;
 
   updateHybridTaskFields(taskId, {
     retry_count: newCount,
@@ -521,11 +552,11 @@ export function incrementRetry(taskId) {
       status: "escalated",
       escalated: true,
       owner: "claude",
-      notes: "AUTO-ESCALATED after 3 retries"
+      notes: `AUTO-ESCALATED after ${maxRetries} retries`
     });
   }
 
-  return { retry_count: newCount, auto_escalated: shouldEscalate };
+  return { retry_count: newCount, max_retries: maxRetries, auto_escalated: shouldEscalate };
 }
 
 // ============================================================
@@ -533,8 +564,8 @@ export function incrementRetry(taskId) {
 // ============================================================
 
 const server = new McpServer({
-  name: "altron-orchestrator",
-  version: "1.0.0",
+  name: "claude-orchestrator",
+  version: "2.2.0",
 });
 
 // --- Tool: dispatch_task ---
@@ -647,11 +678,11 @@ server.tool(
 server.tool(
   "update_task_status",
   "Update the status of a task in tasks.yaml. " +
-  "Valid statuses: pending, running, needs_review, done, failed, conflict. " +
+  "Valid statuses: pending, running, needs_review, done, failed, conflict, escalated. " +
   "Always call this after every significant state change.",
   {
     task_id: z.string(),
-    status: z.enum(["pending", "running", "needs_review", "done", "failed", "conflict"]),
+    status: z.enum(["pending", "running", "needs_review", "done", "failed", "conflict", "escalated"]),
     notes: z.string().optional(),
   },
   async ({ task_id, status, notes }) => {
@@ -876,14 +907,11 @@ server.tool(
   async ({ task_id, message, type, workdir }) => {
     try {
       const star = await getStar();
-      const notif = star.sendStarNotification({ taskId: task_id, message, type, workdir });
-      // Also update workspace
-      if (workdir) {
-        star.updateWorkspace(`ws-${task_id.toLowerCase().replace('-','')}`, {
-          last_notification: message,
-          notification_count: 1
-        });
-      }
+      const notif = star.sendNotification({ taskId: task_id, message, type, workdir });
+      // Also update the matching workspace (matched by task_id, not a guessed id)
+      try {
+        star.updateWorkspaceByTask(task_id, { last_notification: message });
+      } catch {}
       return { content: [{ type: "text", text: JSON.stringify({ success: true, notification: notif }, null, 2) }] };
     } catch (error) {
       return { content: [{ type: "text", text: `ERROR: ${error.message}` }], isError: true };
@@ -1179,8 +1207,8 @@ async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   // Log to stderr only (stdout is reserved for MCP protocol)
-  console.error("🚀 Altron Orchestrator MCP server started");
-  console.error(`   Repo root: ${REPO_ROOT}`);
+  console.error("🚀 Claude Orchestrator MCP server started (v2.2.0)");
+  console.error(`   Project root: ${REPO_ROOT} (override with ORCHESTRATOR_ROOT)`);
   console.error(`   Tasks file: ${TASKS_FILE}`);
   console.error(`   Ready to accept tool calls from Claude.`);
 }

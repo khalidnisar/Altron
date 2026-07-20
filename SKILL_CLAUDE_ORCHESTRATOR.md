@@ -1,4 +1,8 @@
-# 🎯 Claude Code Skill: Hybrid + star Orchestrator (v2.1)
+# 🎯 Claude Code Skill: Hybrid + star Orchestrator (v2.2)
+
+> **The actual skill lives in [`skills/claude-orchestrator/`](skills/claude-orchestrator/SKILL.md)**
+> (SKILL.md + references + bundled MCP server). Install by copying that folder
+> to `~/.claude/skills/claude-orchestrator`. This file is a historical summary.
 
 **Title:** Orchestrating Multiple Coding Agents (Hybrid 30/70 + star features)
 

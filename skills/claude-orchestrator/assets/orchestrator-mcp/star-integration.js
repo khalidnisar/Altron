@@ -11,12 +11,13 @@
 
 import fs from 'fs-extra';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import yaml from 'js-yaml';
 import { execSync } from 'child_process';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const REPO_ROOT = path.resolve(__dirname, '..');
+// Project root = cwd (Claude Code launches MCP servers at the project root).
+const REPO_ROOT = process.env.ORCHESTRATOR_ROOT
+  ? path.resolve(process.env.ORCHESTRATOR_ROOT)
+  : process.cwd();
 
 const WORKSPACES_FILE = path.join(REPO_ROOT, 'workspaces.yaml');
 const NOTIFS_FILE = path.join(REPO_ROOT, '.star-notifications.json');
@@ -26,73 +27,56 @@ const STAR_CONFIG = path.join(REPO_ROOT, 'star.json');
 export function getWorkspaces() {
   try {
     if (fs.existsSync(WORKSPACES_FILE)) {
-      // Very lightweight parser
-      const content = fs.readFileSync(WORKSPACES_FILE, 'utf8');
-      return parseWorkspacesYaml(content);
+      const doc = yaml.load(fs.readFileSync(WORKSPACES_FILE, 'utf8')) || {};
+      return {
+        workspaces: Array.isArray(doc.workspaces) ? doc.workspaces : [],
+        metadata: doc.metadata || {},
+      };
     }
   } catch {}
   return { workspaces: [], metadata: {} };
 }
 
-function parseWorkspacesYaml(yaml) {
-  const workspaces = [];
-  const lines = yaml.split('\n');
-  let current = null;
-
-  for (const line of lines) {
-    const t = line.trim();
-    if (t.startsWith('- id:')) {
-      if (current) workspaces.push(current);
-      current = {};
-      const m = t.match(/id:\s*(\S+)/);
-      if (m) current.id = m[1];
-    } else if (current) {
-      const m = t.match(/^(\w+):\s*(.+)$/);
-      if (m) {
-        let k = m[1], v = m[2].replace(/^["']|["']$/g, '');
-        if (k === 'listening_ports') {
-          current[k] = v.split(',').map(x => x.trim()).filter(Boolean);
-        } else {
-          current[k] = v;
-        }
-      }
-    }
-  }
-  if (current) workspaces.push(current);
-  return { workspaces, metadata: { last_updated: new Date().toISOString() } };
-}
-
 export function updateWorkspace(workspaceId, updates) {
-  // Simple string-based update (good enough for our use)
+  // Line-based update (preserves comments). Workspace id matched exactly.
+  if (!fs.existsSync(WORKSPACES_FILE)) return false;
   let content = fs.readFileSync(WORKSPACES_FILE, 'utf8');
   const lines = content.split('\n');
   let inWs = false;
+  let updated = false;
   const newLines = lines.map(line => {
     const t = line.trim();
     if (t.startsWith('- id:')) {
-      inWs = t.includes(workspaceId);
+      const m = t.match(/id:\s*(\S+)/);
+      inWs = !!m && m[1] === workspaceId;
     }
     if (inWs) {
       for (const [k, v] of Object.entries(updates)) {
         if (t.startsWith(`${k}:`)) {
           const indent = line.match(/^(\s*)/)[1] || '  ';
+          updated = true;
           if (Array.isArray(v)) {
-            return `${indent}${k}: ${v.join(', ')}`;
+            return `${indent}${k}: [${v.join(', ')}]`;
           }
-          return `${indent}${k}: ${v}`;
+          return `${indent}${k}: ${JSON.stringify(v)}`;
         }
       }
     }
     return line;
   });
-  fs.writeFileSync(WORKSPACES_FILE, newLines.join('\n'));
-  return true;
+  if (updated) fs.writeFileSync(WORKSPACES_FILE, newLines.join('\n'));
+  return updated;
+}
+
+// Find the workspace belonging to a task and update it.
+export function updateWorkspaceByTask(taskId, updates) {
+  const ws = getWorkspaces().workspaces.find(w => w.task_id === taskId);
+  if (!ws) return false;
+  return updateWorkspace(ws.id, updates);
 }
 
 // --- Notifications ---
 export function sendNotification({ taskId, message, type = 'info', workdir = null }) {
-  const { addNotification } = require('./star-notify.js'); // reuse
-  // Since it's ESM, we do dynamic import in real use. For simplicity here:
   const data = loadNotifs();
   const notif = {
     id: `n-${Date.now()}`,
@@ -105,6 +89,7 @@ export function sendNotification({ taskId, message, type = 'info', workdir = nul
   };
   data.notifications = data.notifications || [];
   data.notifications.unshift(notif);
+  if (data.notifications.length > 50) data.notifications = data.notifications.slice(0, 50);
   data.unread = data.notifications.filter(n => !n.read).length;
   fs.writeFileSync(NOTIFS_FILE, JSON.stringify(data, null, 2));
   return notif;

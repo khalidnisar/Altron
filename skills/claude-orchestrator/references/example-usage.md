@@ -2,7 +2,7 @@
 
 ## Initial Session (First Time)
 
-1. Open Claude Code on the `/home/user/Altron` folder.
+1. Open Claude Code on the project folder (the one containing `tasks.yaml` and `.mcp.json`).
 2. Claude should detect `CLAUDE.md` and the MCP server via `.mcp.json`.
 3. Send this message:
 
