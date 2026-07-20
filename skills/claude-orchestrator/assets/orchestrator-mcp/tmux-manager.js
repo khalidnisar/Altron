@@ -283,10 +283,13 @@ export function getTmuxStatus(session = TMUX_SESSION) {
 export function launchAgentInTmux(taskId, worker, prompt, workdir, session = TMUX_SESSION) {
   const ws = createWorkspace(taskId, worker, workdir, session);
 
-  // Build the actual command from the shared worker registry (prompt safely quoted)
+  // Build the actual command from the shared worker registry (prompt safely quoted).
+  // Same worktree fence as process dispatch — keep agents inside their sandbox.
+  const fullDir = path.resolve(REPO_ROOT, workdir);
+  const fenced = `IMPORTANT: Your working directory is ${fullDir}. Create and modify files ONLY inside ${fullDir} — never in any other checkout of this repository.\n\n${prompt}`;
   let agentCmd;
   try {
-    agentCmd = buildShellCommand(worker, prompt);
+    agentCmd = buildShellCommand(worker, fenced);
   } catch {
     agentCmd = `echo ${shq(`[AGENT] unknown worker ${worker} — would run: ${prompt}`)}`;
   }

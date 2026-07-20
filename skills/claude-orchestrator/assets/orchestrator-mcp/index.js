@@ -49,7 +49,7 @@ const TASKS_FILE = path.join(REPO_ROOT, "tasks.yaml");
 const IS_WINDOWS = process.platform === "win32";
 
 // Worker CLI registry lives in workers.js (built-ins + star.json overrides).
-import { buildCommand, listWorkerNames } from "./workers.js";
+import { buildCommand, listWorkerNames, resolveExecutable } from "./workers.js";
 
 // Default max runtime for spawned agents (ms)
 const DEFAULT_TIMEOUT_MS = 1000 * 60 * 15; // 15 minutes
@@ -206,7 +206,12 @@ export function dispatchTask(toolName, prompt, workdir, taskId = null) {
     throw new Error(`Workdir does not exist: ${cwd}. Create with git worktree first.`);
   }
 
-  const { cmd, args } = buildCommand(toolName, prompt); // throws with the list of available workers
+  // Guardrail: agent CLIs that resolve "project root" via git can escape a
+  // worktree into the main checkout — pin them to their sandbox explicitly.
+  const fencedPrompt =
+    `IMPORTANT: Your working directory is ${cwd}. Create and modify files ONLY inside ${cwd} — never in any other checkout of this repository.\n\n${prompt}`;
+
+  const { cmd, args, env: workerEnv } = buildCommand(toolName, fencedPrompt); // throws with the list of available workers
 
   // Clear previous log for this run
   fs.ensureFileSync(logPath);
@@ -215,15 +220,37 @@ export function dispatchTask(toolName, prompt, workdir, taskId = null) {
   const out = fs.openSync(logPath, "a");
   const err = fs.openSync(logPath, "a");
 
-  const child = spawn(cmd, args, {
-    cwd,
-    stdio: ["ignore", out, err],
-    detached: !IS_WINDOWS,
-    // Windows: agent CLIs are usually .cmd shims — they need a shell to resolve.
-    shell: IS_WINDOWS,
-    windowsHide: true,
-    env: { ...process.env },
-  });
+  // Windows: npm CLIs are .cmd shims. Resolve the shim's real target (exe or
+  // node script) and spawn WITHOUT a shell — cmd.exe mangles embedded quotes
+  // and splits on newlines. Shell fallback only for shell builtins (echo).
+  const spawnEnv = { ...process.env, ...(workerEnv || {}) };
+  const resolved = IS_WINDOWS ? resolveExecutable(cmd) : null;
+  let child;
+  if (resolved) {
+    child = spawn(resolved.file, [...resolved.prefixArgs, ...args], {
+      cwd,
+      stdio: ["ignore", out, err],
+      windowsHide: true,
+      env: spawnEnv,
+    });
+  } else if (IS_WINDOWS) {
+    // cmd.exe path: soften quotes, flatten newlines to spaces
+    const winQuote = (a) => `"${String(a).replace(/\r?\n/g, " ").replace(/"/g, "'")}"`;
+    child = spawn([cmd, ...args.map(winQuote)].join(" "), {
+      cwd,
+      stdio: ["ignore", out, err],
+      shell: true,
+      windowsHide: true,
+      env: spawnEnv,
+    });
+  } else {
+    child = spawn(cmd, args, {
+      cwd,
+      stdio: ["ignore", out, err],
+      detached: true,
+      env: spawnEnv,
+    });
+  }
 
   child.unref();
 
@@ -278,6 +305,9 @@ export function checkStatus(workdir) {
 
   try {
     diffStat = execSync(`git -C "${cwd}" diff --stat`, { encoding: "utf8" }).trim();
+    // git diff misses NEW files — porcelain status catches untracked work
+    const porcelain = execSync(`git -C "${cwd}" status --porcelain`, { encoding: "utf8" }).trim();
+    if (porcelain) diffStat = `${diffStat ? diffStat + "\n" : ""}status:\n${porcelain}`;
   } catch (e) {
     diffStat = `Error getting diff: ${e.message}`;
   }

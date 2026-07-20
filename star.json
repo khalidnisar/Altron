@@ -28,7 +28,19 @@
   "agents": {
     "supported": ["opencode", "codex", "autoclaw", "zcode", "cursor", "hermes", "claude"],
     "commands": {
-      "_comment": "Add/override worker CLIs without code changes. {PROMPT} is replaced with the task prompt.",
+      "_comment": "Add/override worker CLIs without code changes. {PROMPT} = task prompt; ${VAR} in env values resolves from the parent environment at dispatch (no secrets on disk).",
+      "opencode": {
+        "cmd": "opencode",
+        "args": ["run", "-m", "opencode/nemotron-3-ultra-free", "{PROMPT}"]
+      },
+      "autoclaw": {
+        "cmd": "autoclaw",
+        "args": ["-n", "-y", "-m", "nvidia/nemotron-3-super-120b-a12b", "chat", "{PROMPT}"],
+        "env": {
+          "OPENAI_BASE_URL": "https://integrate.api.nvidia.com/v1",
+          "OPENAI_API_KEY": "${NVIDIA_API_KEY}"
+        }
+      },
       "_example_zcode_override": { "cmd": "zcode", "args": ["--headless", "{PROMPT}"] }
     },
     "notification_patterns": [
