@@ -26,7 +26,8 @@ All tools are exposed by `assets/orchestrator-mcp/index.js` (server name
 
 | Tool | Parameters | Purpose |
 |------|-----------|---------|
-| `dispatch_task` | `tool` (`opencode`\|`cursor`\|`hermes`\|`echo`), `prompt`, `workdir`, `task_id?`, `use_tmux?` | Launch a headless worker in its worktree. Logs to `.agent-log.txt`, PID to `.agent-pid`. `use_tmux: true` runs it in a tmux window instead. |
+| `list_workers` | — | Every worker CLI (built-in + star.json custom) with install status. Call before first dispatch. |
+| `dispatch_task` | `tool` (worker name), `prompt`, `workdir`, `task_id?`, `use_tmux?` | Launch a headless worker in its worktree. Logs to `.agent-log.txt`, PID to `.agent-pid`. `use_tmux: true` runs it in a tmux window instead. |
 | `check_status` | `workdir` | Log tail (50 lines) + `git diff --stat` + PID liveness. |
 | `get_full_diff` | `workdir` | Full unified diff of the worker's changes. |
 | `run_tests` | `workdir` | Auto-detects gradlew / npm test / cargo / pytest; returns `passed` + output. |
@@ -90,15 +91,32 @@ tasks_metadata:
   main_branch: "main"
 ```
 
-## Adding a new worker CLI
+## Worker registry
 
-Edit `TOOL_CMDS` in `assets/orchestrator-mcp/index.js`:
+Built-in workers (`assets/orchestrator-mcp/workers.js`), all headless:
 
-```js
-const TOOL_CMDS = {
-  mynewagent: (prompt, cwd) => ({ cmd: "my-agent", args: ["--headless", prompt] }),
-};
+| Worker | Command executed |
+|--------|------------------|
+| `opencode` | `opencode run <prompt>` |
+| `codex` | `codex exec -s workspace-write --skip-git-repo-check <prompt>` |
+| `autoclaw` | `autoclaw -n -y chat <prompt>` |
+| `zcode` | `zcode --headless <prompt>` (expects ZCode Agent on PATH) |
+| `cursor` | `cursor-agent -p <prompt> --output-format json` |
+| `hermes` | `hermes --headless --prompt <prompt>` |
+| `echo` | prints the prompt to the log (dry run) |
+
+## Adding a new worker CLI (no code changes)
+
+Add to the project's `star.json` — entries override built-ins of the same name,
+`{PROMPT}` is replaced with the task prompt, `_`-prefixed keys are ignored:
+
+```json
+"agents": {
+  "commands": {
+    "aider": { "cmd": "aider", "args": ["--message", "{PROMPT}", "--yes"] }
+  }
+}
 ```
 
-Also extend the `tool`/`worker` enums in the `dispatch_task` and
-`tmux_launch_agent` tool schemas.
+`dispatch_task` and `tmux_launch_agent` accept any registered name; unknown
+names error with the list of available workers.

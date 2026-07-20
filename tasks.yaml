@@ -140,6 +140,8 @@ tasks_metadata:
   model: "hybrid-orchestrator"
   active_agents:
     - opencode
+    - codex
+    - autoclaw
     - cursor
     - hermes
   max_concurrent: 3

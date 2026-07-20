@@ -1,13 +1,13 @@
 {
   "name": "claude-orchestrator-mcp",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "MCP server for Claude to orchestrate multiple headless coding agents (opencode, cursor-agent, etc) using git worktrees — hybrid 30/70 model with retries, escalation, STAR-style workspaces, notifications, and tmux",
   "type": "module",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js",
-    "test": "node --check index.js && node --check star-integration.js && node --check star-notify.js && node --check star-browser.js && node --check tmux-integration.js && node --check tmux-manager.js && echo Syntax OK"
+    "test": "node --check index.js && node --check workers.js && node --check star-integration.js && node --check star-notify.js && node --check star-browser.js && node --check tmux-integration.js && node --check tmux-manager.js && echo Syntax OK"
   },
   "keywords": [
     "mcp",

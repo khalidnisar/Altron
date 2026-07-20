@@ -13,6 +13,7 @@
 import { execSync, execFileSync } from 'child_process';
 import fs from 'fs-extra';
 import path from 'path';
+import { buildShellCommand } from './workers.js';
 
 // Project root = cwd (Claude Code launches MCP servers at the project root).
 const REPO_ROOT = process.env.ORCHESTRATOR_ROOT
@@ -282,12 +283,13 @@ export function getTmuxStatus(session = TMUX_SESSION) {
 export function launchAgentInTmux(taskId, worker, prompt, workdir, session = TMUX_SESSION) {
   const ws = createWorkspace(taskId, worker, workdir, session);
 
-  // Build the actual command the agent would run (prompt safely quoted)
-  let agentCmd = '';
-  if (worker === 'opencode') agentCmd = `opencode run ${shq(prompt)}`;
-  else if (worker === 'cursor') agentCmd = `cursor-agent -p ${shq(prompt)} --output-format json`;
-  else if (worker === 'hermes') agentCmd = `hermes --headless --prompt ${shq(prompt)}`;
-  else agentCmd = `echo ${shq(`[AGENT] ${worker} would run: ${prompt}`)}`;
+  // Build the actual command from the shared worker registry (prompt safely quoted)
+  let agentCmd;
+  try {
+    agentCmd = buildShellCommand(worker, prompt);
+  } catch {
+    agentCmd = `echo ${shq(`[AGENT] unknown worker ${worker} — would run: ${prompt}`)}`;
+  }
 
   // Send the command into the pane
   sendToWorkspace(taskId, worker, agentCmd, session);

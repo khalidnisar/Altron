@@ -16,8 +16,10 @@ after repeated agent failure.
 - The project must contain a `tasks.yaml` board and register the bundled MCP
   server (`assets/orchestrator-mcp/`) via `.mcp.json`. If missing, run the
   bootstrap in **Setup** below.
-- Node.js 18+, git. At least one headless agent CLI on PATH (`opencode`,
-  `cursor-agent`, `aider`, …). Without any, use the `echo` tool for dry runs.
+- Node.js 18+, git. At least one headless agent CLI on PATH. Built-in workers:
+  `opencode`, `codex`, `autoclaw`, `zcode`, `cursor`, `hermes`, plus `echo` for
+  dry runs. Call `list_workers()` to see which are actually installed; add or
+  override workers in `star.json` → `agents.commands` (no code changes needed).
 - tmux tools and browser tools are optional extras (tmux on Linux/macOS only;
   browser needs `playwright` installed). All core tools work without them.
 
@@ -66,6 +68,7 @@ If the project has no `.mcp.json` entry for `claude-orchestrator`:
 ## Workflow
 
 ```
+0. list_workers() → know which agent CLIs are installed (dispatch only to those)
 1. list_tasks() → pick pending tasks by priority
 2. plan_task_split(task_id, claude_responsibility, agent_responsibility, difficulty)
 3. easy/long → dispatch_task(tool, prompt, workdir, task_id)

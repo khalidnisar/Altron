@@ -26,7 +26,11 @@
     "devtools": false
   },
   "agents": {
-    "supported": ["opencode", "cursor", "hermes", "claude"],
+    "supported": ["opencode", "codex", "autoclaw", "zcode", "cursor", "hermes", "claude"],
+    "commands": {
+      "_comment": "Add/override worker CLIs without code changes. {PROMPT} is replaced with the task prompt.",
+      "_example_zcode_override": { "cmd": "zcode", "args": ["--headless", "{PROMPT}"] }
+    },
     "notification_patterns": [
       "waiting for input",
       "needs your attention",

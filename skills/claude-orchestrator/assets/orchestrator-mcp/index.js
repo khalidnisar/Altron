@@ -48,32 +48,8 @@ const REPO_ROOT = process.env.ORCHESTRATOR_ROOT
 const TASKS_FILE = path.join(REPO_ROOT, "tasks.yaml");
 const IS_WINDOWS = process.platform === "win32";
 
-// Map of tool names → CLI command builder
-// Each must be headless / non-interactive
-const TOOL_CMDS = {
-  opencode: (prompt, cwd) => ({
-    cmd: "opencode",
-    args: ["run", prompt],
-    // Adjust if your opencode CLI differs
-  }),
-  cursor: (prompt, cwd) => ({
-    cmd: "cursor-agent",
-    args: ["-p", prompt, "--output-format", "json"],
-    // Cursor CLI example from the spec
-  }),
-  // Add more as confirmed:
-  // zcode: (prompt, cwd) => ({ cmd: "zcode", args: ["--headless", prompt] }),
-  hermes: (prompt, cwd) => ({
-    cmd: "hermes",
-    args: ["--headless", "--prompt", prompt],
-    // Or replace with actual harness e.g. "aider" + model flag
-  }),
-  // Generic fallback (useful for testing)
-  echo: (prompt, cwd) => ({
-    cmd: "echo",
-    args: [`[ECHO AGENT] Would run: ${prompt}`],
-  }),
-};
+// Worker CLI registry lives in workers.js (built-ins + star.json overrides).
+import { buildCommand, listWorkerNames } from "./workers.js";
 
 // Default max runtime for spawned agents (ms)
 const DEFAULT_TIMEOUT_MS = 1000 * 60 * 15; // 15 minutes
@@ -125,43 +101,11 @@ function getCurrentTasks() {
 }
 
 function updateTaskStatusInYaml(taskId, newStatus, extraNotes = "") {
-  let content = fs.readFileSync(TASKS_FILE, "utf8");
-  const lines = content.split("\n");
-  let inTask = false;
-  let updated = false;
-
-  const newLines = lines.map((line) => {
-    const trimmed = line.trim();
-    
-    if (trimmed.startsWith("- id:")) {
-      const idMatch = trimmed.match(/id:\s*([T0-9-]+)/);
-      if (idMatch && idMatch[1] === taskId) {
-        inTask = true;
-      } else {
-        inTask = false;
-      }
-    }
-    
-    if (inTask && trimmed.startsWith("status:")) {
-      const indent = line.match(/^(\s*)/)[1] || "  ";
-      updated = true;
-      return `${indent}status: ${newStatus}`;
-    }
-    
-    if (inTask && extraNotes && trimmed.startsWith("notes:")) {
-      const indent = line.match(/^(\s*)/)[1] || "  ";
-      const oldNote = trimmed.replace("notes:", "").trim();
-      const combined = oldNote ? `${oldNote} | ${extraNotes}` : extraNotes;
-      return `${indent}notes: "${combined}"`;
-    }
-    
-    return line;
-  });
-
-  if (updated) {
-    fs.writeFileSync(TASKS_FILE, newLines.join("\n"), "utf8");
-  }
-  return updated;
+  // Single write path: updateHybridTaskFields handles quote-stripping,
+  // insertion of missing fields, and comment preservation.
+  const updates = { status: newStatus };
+  if (extraNotes) updates.notes = extraNotes;
+  return updateHybridTaskFields(taskId, updates);
 }
 
 // Hybrid-specific: update multiple fields (status, retry_count, escalated,
@@ -175,7 +119,8 @@ const HYBRID_FIELDS = [
 function formatFieldLine(indent, key, value, oldLineTrimmed = "") {
   if (key === "notes") {
     const old = oldLineTrimmed.replace("notes:", "").trim().replace(/^["']|["']$/g, "");
-    const combined = old ? `${old} | ${value}` : String(value);
+    // Inner double quotes would break the quoted YAML scalar — soften them.
+    const combined = (old ? `${old} | ${value}` : String(value)).replace(/"/g, "'");
     return `${indent}notes: "${combined}"`;
   }
   if (key === "owner" || key === "claude_responsibility" || key === "agent_responsibility") {
@@ -261,12 +206,7 @@ export function dispatchTask(toolName, prompt, workdir, taskId = null) {
     throw new Error(`Workdir does not exist: ${cwd}. Create with git worktree first.`);
   }
 
-  const toolDef = TOOL_CMDS[toolName];
-  if (!toolDef) {
-    throw new Error(`Unknown tool: ${toolName}. Available: ${Object.keys(TOOL_CMDS).join(", ")}`);
-  }
-
-  const { cmd, args } = toolDef(prompt, cwd);
+  const { cmd, args } = buildCommand(toolName, prompt); // throws with the list of available workers
 
   // Clear previous log for this run
   fs.ensureFileSync(logPath);
@@ -565,7 +505,7 @@ export function incrementRetry(taskId) {
 
 const server = new McpServer({
   name: "claude-orchestrator",
-  version: "2.2.0",
+  version: "2.3.0",
 });
 
 // --- Tool: dispatch_task ---
@@ -576,7 +516,7 @@ server.tool(
   "Supports two modes: normal (detached process) or **deep tmux** (recommended for full STAR experience). " +
   "Set use_tmux=true for a real multiplexed tmux window with splits, capture, focus, etc.",
   {
-    tool: z.enum(["opencode", "cursor", "hermes", "echo"]).describe("Which worker agent CLI to use"),
+    tool: z.string().describe("Which worker agent CLI to use. Built-ins: opencode, codex, autoclaw, zcode, cursor, hermes, echo. Extendable via star.json agents.commands. Call list_workers to see what's available."),
     prompt: z.string().min(10).describe("The full task description / prompt to give the agent"),
     workdir: z.string().describe("Relative or absolute path to the agent's git worktree (e.g. '../work-opencode')"),
     task_id: z.string().optional().describe("Optional task ID from tasks.yaml to auto-update status"),
@@ -717,6 +657,32 @@ server.tool(
         content: [{ type: "text", text: `ERROR: ${error.message}` }],
         isError: true,
       };
+    }
+  }
+);
+
+// --- Tool: list_workers ---
+server.tool(
+  "list_workers",
+  "List every worker agent CLI the orchestrator can dispatch to (built-ins + star.json custom), " +
+  "with install status (whether the command resolves on PATH). " +
+  "Call before dispatching if unsure which workers are usable on this machine.",
+  {},
+  async () => {
+    try {
+      const whichCmd = IS_WINDOWS ? "where" : "which";
+      const workers = listWorkerNames().map((name) => {
+        const { cmd, args } = buildCommand(name, "probe");
+        let installed = false;
+        try {
+          execSync(`${whichCmd} ${cmd}`, { stdio: "ignore" });
+          installed = true;
+        } catch {}
+        return { name, cmd, example_args: args, installed };
+      });
+      return { content: [{ type: "text", text: JSON.stringify({ workers }, null, 2) }] };
+    } catch (error) {
+      return { content: [{ type: "text", text: `ERROR: ${error.message}` }], isError: true };
     }
   }
 );
@@ -1098,7 +1064,7 @@ server.tool(
   "This is the most powerful mode — the agent runs in a real multiplexed terminal window.",
   {
     task_id: z.string(),
-    worker: z.enum(["opencode", "cursor", "hermes", "echo"]),
+    worker: z.string().describe("Worker name from list_workers (opencode, codex, autoclaw, zcode, cursor, hermes, echo, or star.json custom)"),
     prompt: z.string(),
     workdir: z.string(),
     session: z.string().optional(),
@@ -1207,7 +1173,7 @@ async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   // Log to stderr only (stdout is reserved for MCP protocol)
-  console.error("🚀 Claude Orchestrator MCP server started (v2.2.0)");
+  console.error("🚀 Claude Orchestrator MCP server started (v2.3.0)");
   console.error(`   Project root: ${REPO_ROOT} (override with ORCHESTRATOR_ROOT)`);
   console.error(`   Tasks file: ${TASKS_FILE}`);
   console.error(`   Ready to accept tool calls from Claude.`);

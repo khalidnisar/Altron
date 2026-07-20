@@ -63,9 +63,10 @@ Restart Claude Code and say:
 
 - Claude Code (or Claude Desktop with MCP support)
 - Node.js 18+ and git
-- One or more headless agent CLIs on PATH: `opencode`, `cursor-agent`,
-  `aider`, or any CLI that accepts a prompt and exits. No agent installed?
-  Use the built-in `echo` tool for dry runs.
+- One or more headless agent CLIs on PATH. Built-in support: `opencode`,
+  `codex`, `autoclaw`, `zcode`, `cursor-agent`, `hermes` — or register any CLI
+  that accepts a prompt and exits via `star.json` → `agents.commands`.
+  No agent installed? Use the built-in `echo` tool for dry runs.
 - Optional: `tmux` (Linux/macOS) for multiplexed agent windows; `playwright`
   for the scriptable browser tools.
 
@@ -93,6 +94,15 @@ CLI actually exits when done.
 inside `assets/orchestrator-mcp/`.
 
 ## Changelog
+
+**2.3.0** (2026-07-20)
+- Worker registry extracted to `workers.js` — shared by process dispatch and tmux
+- New built-in workers: `codex` (OpenAI Codex CLI, sandboxed workspace-write),
+  `autoclaw` (headless `-n -y`), `zcode` (ZCode Agent, expects CLI on PATH)
+- Custom workers via `star.json` → `agents.commands` (`{PROMPT}` placeholder,
+  overrides built-ins) — no code edits to add an agent
+- New `list_workers` tool: registry + on-PATH install status per worker
+- `dispatch_task`/`tmux_launch_agent` accept any registered worker name
 
 **2.2.0** (2026-07-20)
 - Proper `SKILL.md` with frontmatter — installable as a real Claude Code skill
