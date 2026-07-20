@@ -120,3 +120,16 @@ Add to the project's `star.json` — entries override built-ins of the same name
 
 `dispatch_task` and `tmux_launch_agent` accept any registered name; unknown
 names error with the list of available workers.
+
+## Automatic model fallback on limits
+
+A worker def may declare `"models": [...]` and use `{MODEL}` in its args.
+Entries are model-id strings or `{ "model": "...", "env": {...} }` for
+per-model provider overrides (different base URL / key env refs). When a
+dispatched worker exits and its log tail matches a limit signature
+(quota / rate limit / 429 / billing / free-models-per-day / 402), the server
+automatically re-dispatches the same prompt on the next model in the chain and
+appends a `[fallback]` line to `.agent-log.txt` plus a note on the task.
+Order chains paid-or-primary first, **free models last** — limits then degrade
+to free instead of failing. `check_status.limit_hit` = the log shows a limit
+error; `dispatch_task` returns `auto_fallback` state.

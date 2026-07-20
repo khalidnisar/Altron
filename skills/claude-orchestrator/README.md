@@ -95,6 +95,12 @@ inside `assets/orchestrator-mcp/`.
 
 ## Changelog
 
+**2.4.0** (2026-07-20)
+- Automatic model fallback: per-worker `models` chains in star.json (`{MODEL}`
+  arg placeholder, optional per-model env override for cross-provider hops).
+  Quota/rate-limit death → auto re-dispatch on next model; free models last so
+  limits degrade to free, never to failure. `check_status.limit_hit` surfaces it.
+
 **2.3.0** (2026-07-20)
 - Worker registry extracted to `workers.js` — shared by process dispatch and tmux
 - New built-in workers: `codex` (OpenAI Codex CLI, sandboxed workspace-write),

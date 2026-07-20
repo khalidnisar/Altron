@@ -49,7 +49,20 @@ const TASKS_FILE = path.join(REPO_ROOT, "tasks.yaml");
 const IS_WINDOWS = process.platform === "win32";
 
 // Worker CLI registry lives in workers.js (built-ins + star.json overrides).
-import { buildCommand, listWorkerNames, resolveExecutable } from "./workers.js";
+import { buildCommand, listWorkerNames, resolveExecutable, modelCount } from "./workers.js";
+
+// Provider limit / quota signatures — when a worker dies with one of these in
+// its log, the orchestrator auto-falls back to the next model in the chain.
+const LIMIT_RE = /quota|rate.?limit|\b429\b|exceeded|billing|free-models-per-day|insufficient[_ ]quota|too many requests|payment required|\b402\b/i;
+
+function logTailHasLimitError(logPath, bytes = 4000) {
+  try {
+    const content = fs.readFileSync(logPath, "utf8");
+    return LIMIT_RE.test(content.slice(-bytes));
+  } catch {
+    return false;
+  }
+}
 
 // Default max runtime for spawned agents (ms)
 const DEFAULT_TIMEOUT_MS = 1000 * 60 * 15; // 15 minutes
@@ -198,7 +211,7 @@ function updateHybridTaskFields(taskId, updates = {}) {
  * Dispatch a task to a worker agent.
  * Starts the agent in detached mode and logs output.
  */
-export function dispatchTask(toolName, prompt, workdir, taskId = null) {
+export function dispatchTask(toolName, prompt, workdir, taskId = null, modelIndex = 0) {
   const cwd = resolveWorkdir(workdir);
   const logPath = getLogPath(cwd);
 
@@ -211,11 +224,16 @@ export function dispatchTask(toolName, prompt, workdir, taskId = null) {
   const fencedPrompt =
     `IMPORTANT: Your working directory is ${cwd}. Create and modify files ONLY inside ${cwd} — never in any other checkout of this repository.\n\n${prompt}`;
 
-  const { cmd, args, env: workerEnv } = buildCommand(toolName, fencedPrompt); // throws with the list of available workers
+  const { cmd, args, env: workerEnv, model } = buildCommand(toolName, fencedPrompt, modelIndex); // throws with the list of available workers
 
-  // Clear previous log for this run
+  // Fresh log per task run; fallback re-dispatches append to keep the evidence
   fs.ensureFileSync(logPath);
-  fs.writeFileSync(logPath, `=== DISPATCHED ${new Date().toISOString()} ===\nTool: ${toolName}\nPrompt: ${prompt}\nCWD: ${cwd}\n\n`);
+  const header = `=== DISPATCHED ${new Date().toISOString()} ===\nTool: ${toolName}${model ? ` | Model: ${model} (#${modelIndex + 1}/${modelCount(toolName)})` : ""}\nPrompt: ${prompt}\nCWD: ${cwd}\n\n`;
+  if (modelIndex === 0) {
+    fs.writeFileSync(logPath, header);
+  } else {
+    fs.appendFileSync(logPath, `\n${header}`);
+  }
 
   const out = fs.openSync(logPath, "a");
   const err = fs.openSync(logPath, "a");
@@ -254,6 +272,31 @@ export function dispatchTask(toolName, prompt, workdir, taskId = null) {
 
   child.unref();
 
+  // AUTO MODEL FALLBACK: when the worker dies with a quota / rate-limit error
+  // and the chain has another model, re-dispatch on it automatically. Free
+  // models at the end of the chain mean limits degrade to free, not failure.
+  const totalModels = modelCount(toolName);
+  if (totalModels > 1 && modelIndex < totalModels - 1) {
+    child.on("exit", () => {
+      try {
+        if (!logTailHasLimitError(logPath)) return;
+        const next = buildCommand(toolName, "probe", modelIndex + 1).model;
+        fs.appendFileSync(
+          logPath,
+          `\n[fallback] Limit/quota error detected on model #${modelIndex + 1} — switching to ${next} (#${modelIndex + 2}/${totalModels})\n`
+        );
+        if (taskId) {
+          try {
+            updateHybridTaskFields(taskId, { notes: `model fallback → ${next}` });
+          } catch {}
+        }
+        dispatchTask(toolName, prompt, workdir, taskId, modelIndex + 1);
+      } catch (e) {
+        try { fs.appendFileSync(logPath, `\n[fallback] failed: ${e.message}\n`); } catch {}
+      }
+    });
+  }
+
   // Write PID for later inspection
   fs.writeFileSync(path.join(cwd, ".agent-pid"), String(child.pid));
 
@@ -277,6 +320,8 @@ export function dispatchTask(toolName, prompt, workdir, taskId = null) {
     success: true,
     pid: child.pid,
     tool: toolName,
+    model: model || "worker default",
+    auto_fallback: totalModels > 1 ? `enabled (${totalModels - 1 - modelIndex} fallback model(s) remaining)` : "no model chain configured",
     workdir: cwd,
     logPath,
     message: `Agent ${toolName} started (PID ${child.pid}). Use check_status to monitor.`,
@@ -333,6 +378,9 @@ export function checkStatus(workdir) {
     workdir: cwd,
     pid,
     running,
+    // true when the log tail shows a quota / rate-limit error — if the worker
+    // has a model chain, a fallback re-dispatch has already been attempted
+    limit_hit: logTailHasLimitError(logPath),
     log_tail: log,
     diff_stat: diffStat || "No changes yet",
     timestamp: new Date().toISOString(),

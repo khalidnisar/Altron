@@ -18,6 +18,13 @@
  * "{PROMPT}" in any arg is replaced with the task prompt.
  * "${VAR}" in any env value is resolved from the parent process environment at
  * dispatch time — key VALUES never live in config files.
+ *
+ * MODEL FALLBACK: a def may carry "models": [...] and use "{MODEL}" in args.
+ * Entries are either a model-id string or { "model": "...", "env": {...} }
+ * (per-model env override — e.g. a different base URL + key for a fallback
+ * provider). When a dispatched worker exits with a quota / rate-limit error,
+ * the orchestrator automatically re-dispatches with the next model in the
+ * chain. Put free models at the end so limits degrade to free, not to failure.
  */
 
 import fs from 'fs-extra';
@@ -47,6 +54,18 @@ const BUILTIN_WORKERS = {
   echo: (prompt) => ({ cmd: 'echo', args: [`[ECHO AGENT] Would run: ${prompt}`] }),
 };
 
+// Model chain entries: "model-id" or { model, env }. Invalid entries dropped.
+function normalizeModels(models) {
+  if (!Array.isArray(models)) return [];
+  return models
+    .map((m) => {
+      if (typeof m === 'string' && m.trim()) return { model: m.trim(), env: undefined };
+      if (m && typeof m === 'object' && typeof m.model === 'string') return { model: m.model, env: m.env };
+      return null;
+    })
+    .filter(Boolean);
+}
+
 // "${VAR}" values are looked up in process.env at call time; literal values
 // pass through. Missing env vars resolve to "" (the worker will surface the
 // auth error itself, which is more debuggable than a spawn crash).
@@ -69,11 +88,23 @@ function loadCustomWorkers() {
     for (const [name, def] of Object.entries(commands)) {
       if (name.startsWith('_')) continue; // _comment / _example entries are docs, not workers
       if (!def || typeof def.cmd !== 'string' || !Array.isArray(def.args)) continue;
-      custom[name] = (prompt) => ({
-        cmd: def.cmd,
-        args: def.args.map((a) => String(a).replaceAll('{PROMPT}', prompt)),
-        env: resolveEnvRefs(def.env),
-      });
+      const chain = normalizeModels(def.models);
+      custom[name] = (prompt, modelIndex = 0) => {
+        const entry = chain.length ? chain[Math.min(modelIndex, chain.length - 1)] : null;
+        return {
+          cmd: def.cmd,
+          args: def.args.map((a) =>
+            String(a)
+              .replaceAll('{PROMPT}', prompt)
+              .replaceAll('{MODEL}', entry ? entry.model : '')
+          ),
+          env: { ...(resolveEnvRefs(def.env) || {}), ...(entry ? resolveEnvRefs(entry.env) || {} : {}) },
+          model: entry ? entry.model : undefined,
+          modelIndex,
+          modelCount: chain.length || 1,
+        };
+      };
+      custom[name].modelCount = chain.length || 1;
     }
     return custom;
   } catch {
@@ -90,13 +121,19 @@ export function listWorkerNames() {
   return Object.keys(getWorkers());
 }
 
-export function buildCommand(toolName, prompt) {
+export function buildCommand(toolName, prompt, modelIndex = 0) {
   const workers = getWorkers();
   const builder = workers[toolName];
   if (!builder) {
     throw new Error(`Unknown worker: ${toolName}. Available: ${Object.keys(workers).join(', ')}`);
   }
-  return builder(prompt);
+  return builder(prompt, modelIndex);
+}
+
+// Number of models in a worker's fallback chain (1 when no chain configured).
+export function modelCount(toolName) {
+  const builder = getWorkers()[toolName];
+  return (builder && builder.modelCount) || 1;
 }
 
 // POSIX single-quote escaping — for sending a full command line into tmux.

@@ -59,6 +59,10 @@ If the project has no `.mcp.json` entry for `claude-orchestrator`:
 4. **Retry ceiling.** After each failed agent attempt call
    `increment_agent_retry(task_id)`. At 3 retries (auto or via
    `escalate_task()`), ownership moves to Claude — finish the task directly.
+   **Model limits are handled below retries**: when a worker dies on a
+   quota/rate-limit error, the server auto-redispatches on the next model in
+   its chain (free models last). `check_status` reports `limit_hit: true` when
+   this happened — do NOT count an auto-fallback as an agent retry.
 5. **Review before merge.** Always `get_full_diff()` + `run_tests()` before
    marking `needs_review`. Never merge without human approval; provide merge
    commands instead.
