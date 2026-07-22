@@ -1,60 +1,40 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Altron Setup Script
-# This script helps set up the development environment
+cd "$(dirname "$0")"
 
-echo "🚀 Altron Setup Script"
-echo "===================="
-echo ""
-
-# Check if running on Android project
-if [ ! -f "build.gradle" ]; then
-    echo "❌ Error: Please run this script from the project root directory"
-    exit 1
+echo "Altron Quant development setup"
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "Python 3.11+ is required." >&2
+  exit 1
 fi
 
-# Check for Android Studio
-if [ ! -d "$ANDROID_HOME" ]; then
-    echo "⚠️  Warning: ANDROID_HOME is not set. Android SDK may not be available."
+python3 - <<'PY'
+import sys
+if sys.version_info < (3, 11):
+    raise SystemExit(f"Python 3.11+ is required; found {sys.version.split()[0]}")
+PY
+
+if [ ! -d .venv ]; then
+  python3 -m venv .venv
 fi
 
-# Check for Java
-if ! command -v java &> /dev/null; then
-    echo "❌ Error: Java is not installed. Please install Java JDK 17+."
-    exit 1
-fi
+.venv/bin/python -m pip install --upgrade pip
+.venv/bin/python -m pip install -e '.[all,dev]'
+mkdir -p data
 
-# Check Java version
-JAVA_VERSION=$(java -version 2>&1 | head -1 | cut -d'"' -f2)
-if [[ "$JAVA_VERSION" < "17" ]]; then
-    echo "⚠️  Warning: Java version $JAVA_VERSION detected. Recommended: Java 17+"
-fi
+cat <<'TXT'
 
-# Check for Kotlin
-if ! command -v kotlin &> /dev/null; then
-    echo "⚠️  Warning: Kotlin compiler not found in PATH. It should be included with Android Studio."
-fi
+Setup complete.
 
-echo "✅ Environment checks completed"
-echo ""
+Activate:       source .venv/bin/activate
+Run tests:      pytest
+List plugins:   altron list-strategies
+Backtest:       python optimizer.py --input candles.csv --strategy ma_crossover
+Strategy test:  altron strategy-test --input candles.csv --strategy supertrend --trials 250
+Walk-forward:   altron --input candles.csv --strategy supertrend --walk-forward
+Paper worker:   altron paper --symbol BTC/USDT --timeframe 1h --source binance
 
-echo "📋 Project Structure:"
-echo "-------------------"
-tree -L 2 -I 'build|.git|.idea|*.iml' .
-echo ""
-
-echo "🔧 Next Steps:"
-echo "-------------"
-echo "1. Open the project in Android Studio"
-echo "2. Add google-services.json to app/ directory"
-echo "3. Configure Firebase project"
-echo "4. Set up Tailscale Tailnet"
-echo "5. Build and run the app"
-echo ""
-
-echo "📚 Documentation:"
-echo "---------------"
-echo "See README.md for detailed setup instructions"
-echo ""
-
-echo "✨ Setup complete!"
+Credentials are optional and belong in environment variables; see .env.example.
+On Windows, install the desktop extra and launch `altron-desktop`.
+TXT

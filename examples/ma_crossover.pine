@@ -1,0 +1,10 @@
+//@version=5
+strategy("MA crossover", overlay=true)
+fast = ta.ema(close, 10)
+slow = ta.ema(close, 30)
+longCondition = ta.crossover(fast, slow)
+shortCondition = ta.crossunder(fast, slow)
+if longCondition
+    strategy.entry("Long", strategy.long)
+if shortCondition
+    strategy.entry("Short", strategy.short)

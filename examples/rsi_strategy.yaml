@@ -1,0 +1,21 @@
+name: rsi_multi_timeframe_reversion
+indicators:
+  - name: rsi_fast
+    indicator: rsi
+    source: close
+    period: 14
+  - name: trend_sma
+    indicator: sma
+    source: close
+    period: 50
+    timeframe: 4h
+long_entry:
+  all:
+    - {left: rsi_fast, operator: "<", right: 30}
+    - {left: close, operator: ">", right: trend_sma}
+long_exit: {left: rsi_fast, operator: ">=", right: 50}
+short_entry:
+  all:
+    - {left: rsi_fast, operator: ">", right: 70}
+    - {left: close, operator: "<", right: trend_sma}
+short_exit: {left: rsi_fast, operator: "<=", right: 50}

@@ -1,0 +1,46 @@
+services:
+  api:
+    build: .
+    environment:
+      ALTRON_DATA_DIR: /app/data
+      ALTRON_OPERATOR_TOKEN: ${ALTRON_OPERATOR_TOKEN:?Set ALTRON_OPERATOR_TOKEN in .env}
+      TRADINGVIEW_WEBHOOK_SECRET: ${TRADINGVIEW_WEBHOOK_SECRET:-}
+    env_file:
+      - path: .env
+        required: false
+    ports: ["8000:8000"]
+    volumes: ["altron-data:/app/data"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  dashboard:
+    build: .
+    command: ["streamlit", "run", "src/altron/dashboard.py", "--server.address=0.0.0.0"]
+    environment:
+      ALTRON_SIGNAL_API: http://api:8000
+      ALTRON_LEADERBOARD: /app/data/leaderboard.sqlite
+      ALTRON_OPERATOR_TOKEN: ${ALTRON_OPERATOR_TOKEN:?Set ALTRON_OPERATOR_TOKEN in .env}
+    env_file:
+      - path: .env
+        required: false
+    ports: ["8501:8501"]
+    volumes: ["altron-data:/app/data"]
+    depends_on: [api]
+    profiles: ["dashboard"]
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    ports: ["3000:3000"]
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    profiles: ["monitoring"]
+
+volumes:
+  altron-data:
+  grafana-data:

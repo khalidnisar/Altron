@@ -1,76 +1,17 @@
-# Android
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-*.swp
-*~
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
-# Android Studio
-*.iml
-.idea/
-
-# Build outputs
-/build/
-/out/
-
-# APK files
-*.apk
-*.ap_
-
-# AAB files
-*.aab
-
-# Proguard
-proguard/
-
-# Keystores
-*.jks
-*.keystore
-
-# Firebase
-google-services.json
-
-# Local configuration
-local.properties
-
-# Environment files
-.env
-.env.local
-
-# Logs
-*.log
-
-# OS generated files
-.DS_Store
-Thumbs.db
-
-# IDE specific
-.idea/
-*.swp
-*.swo
-*~
-.vscode/
-
-# Test files
-/app/src/test/
-/app/src/androidTest/
-
-# Coverage reports
-coverage/
-
-# SonarQube
-.sonar/
-
-# Fastlane
-fastlane/
-
-# Crashlytics
-crashlytics-build.properties
-
-# Tailscale
-.tailscale/
+# Altron runtime state (keep directory placeholders/examples only)
+data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+optuna.db
