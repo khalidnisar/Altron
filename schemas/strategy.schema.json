@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://altron.local/schemas/strategy.schema.json",
+  "title": "Altron rule strategy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "indicators", "long_entry", "long_exit"],
+  "properties": {
+    "name": {"type": "string", "minLength": 1},
+    "indicators": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["name", "indicator"],
+        "properties": {
+          "name": {"type": "string"},
+          "indicator": {"enum": ["sma", "ema", "rsi", "macd", "macd_signal", "macd_histogram", "bollinger_lower", "bollinger_middle", "bollinger_upper", "donchian_lower", "donchian_middle", "donchian_upper", "atr", "supertrend", "supertrend_direction", "vwap"]},
+          "source": {"enum": ["open", "high", "low", "close", "volume"], "default": "close"},
+          "period": {"type": "integer", "minimum": 1},
+          "timeframe": {"type": "string", "pattern": "^[1-9][0-9]*[mhd]$"},
+          "params": {"type": "object"}
+        }
+      }
+    },
+    "long_entry": {"$ref": "#/$defs/rule"},
+    "long_exit": {"$ref": "#/$defs/rule"},
+    "short_entry": {"$ref": "#/$defs/rule"},
+    "short_exit": {"$ref": "#/$defs/rule"}
+  },
+  "$defs": {
+    "comparison": {
+      "type": "object", "additionalProperties": false,
+      "required": ["left", "operator", "right"],
+      "properties": {
+        "left": {"type": ["string", "number"]},
+        "operator": {"enum": [">", ">=", "<", "<=", "==", "crosses_above", "crosses_below"]},
+        "right": {"type": ["string", "number"]}
+      }
+    },
+    "rule": {
+      "oneOf": [
+        {"$ref": "#/$defs/comparison"},
+        {"type": "object", "required": ["all"], "properties": {"all": {"type": "array", "items": {"$ref": "#/$defs/rule"}}}, "additionalProperties": false},
+        {"type": "object", "required": ["any"], "properties": {"any": {"type": "array", "items": {"$ref": "#/$defs/rule"}}}, "additionalProperties": false},
+        {"type": "object", "required": ["not"], "properties": {"not": {"$ref": "#/$defs/rule"}}, "additionalProperties": false}
+      ]
+    }
+  }
+}
