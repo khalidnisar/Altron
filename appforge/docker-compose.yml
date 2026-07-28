@@ -1,0 +1,107 @@
+# AppForge AI - Linux-container stack (Docker Desktop for Windows, WSL2 backend)
+#
+#   docker compose up -d --build
+#   Dashboard  http://localhost:3000
+#   API docs   http://localhost:8000/docs
+#
+name: appforge
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-appforge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-appforge}
+      POSTGRES_DB: ${POSTGRES_DB:-appforge}
+      # Deterministic init on Windows bind mounts.
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-appforge} -d ${POSTGRES_DB:-appforge}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./services/api
+    environment:
+      APPFORGE_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-appforge}:${POSTGRES_PASSWORD:-appforge}@db:5432/${POSTGRES_DB:-appforge}
+      APPFORGE_STORAGE_ROOT: /data/artifacts
+      APPFORGE_STORAGE_PUBLIC_BASE: http://localhost:8000/artifacts
+      APPFORGE_CORS_ORIGINS: http://localhost:3000
+      APPFORGE_ENVIRONMENT: ${APPFORGE_ENVIRONMENT:-development}
+      APPFORGE_OPERATOR_TOKEN: ${APPFORGE_OPERATOR_TOKEN:-}
+      # Optional providers; blank values keep the platform in offline mode.
+      APPFORGE_OPENAI_API_KEY: ${APPFORGE_OPENAI_API_KEY:-}
+      APPFORGE_ANTHROPIC_API_KEY: ${APPFORGE_ANTHROPIC_API_KEY:-}
+      APPFORGE_SENSORTOWER_API_KEY: ${APPFORGE_SENSORTOWER_API_KEY:-}
+      APPFORGE_BROWSERSTACK_USER: ${APPFORGE_BROWSERSTACK_USER:-}
+      APPFORGE_BROWSERSTACK_KEY: ${APPFORGE_BROWSERSTACK_KEY:-}
+      APPFORGE_GENYMOTION_API_KEY: ${APPFORGE_GENYMOTION_API_KEY:-}
+      APPFORGE_PLAY_CONSOLE_SERVICE_ACCOUNT_JSON: ${APPFORGE_PLAY_CONSOLE_SERVICE_ACCOUNT_JSON:-}
+      APPFORGE_ADMOB_APP_ID: ${APPFORGE_ADMOB_APP_ID:-}
+      APPFORGE_REVENUECAT_API_KEY: ${APPFORGE_REVENUECAT_API_KEY:-}
+      APPFORGE_SENTRY_DSN: ${APPFORGE_SENTRY_DSN:-}
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      - "8000:8000"
+    volumes:
+      - artifacts:/data/artifacts
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ./services/api
+    command: ["python", "-m", "appforge.worker"]
+    environment:
+      APPFORGE_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-appforge}:${POSTGRES_PASSWORD:-appforge}@db:5432/${POSTGRES_DB:-appforge}
+      APPFORGE_STORAGE_ROOT: /data/artifacts
+      APPFORGE_STORAGE_PUBLIC_BASE: http://localhost:8000/artifacts
+      APPFORGE_OPENAI_API_KEY: ${APPFORGE_OPENAI_API_KEY:-}
+      APPFORGE_ANTHROPIC_API_KEY: ${APPFORGE_ANTHROPIC_API_KEY:-}
+      APPFORGE_BROWSERSTACK_USER: ${APPFORGE_BROWSERSTACK_USER:-}
+      APPFORGE_BROWSERSTACK_KEY: ${APPFORGE_BROWSERSTACK_KEY:-}
+      APPFORGE_PLAY_CONSOLE_SERVICE_ACCOUNT_JSON: ${APPFORGE_PLAY_CONSOLE_SERVICE_ACCOUNT_JSON:-}
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - artifacts:/data/artifacts
+    depends_on:
+      db:
+        condition: service_healthy
+      api:
+        condition: service_started
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: ./apps/dashboard
+    environment:
+      APPFORGE_API_URL: http://api:8000
+      APPFORGE_OPERATOR_TOKEN: ${APPFORGE_OPERATOR_TOKEN:-}
+      NODE_ENV: production
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Optional: MT5-style Windows-only bridge lives in docker-compose.windows.yml.
+
+volumes:
+  db-data:
+  artifacts:

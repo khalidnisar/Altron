@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "appforge-ai"
+version = "1.0.0"
+description = "AppForge AI - autonomous viral app discovery, cloning, and monetization platform"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.29",
+  "sqlalchemy>=2.0,<3",
+  "alembic>=1.13",
+  "psycopg[binary]>=3.1",
+  "pydantic>=2.6,<3",
+  "pydantic-settings>=2.2",
+  "httpx>=0.27",
+  "python-multipart>=0.0.9",
+  "tenacity>=8.2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.23", "ruff>=0.5", "mypy>=1.10"]
+
+[project.scripts]
+appforge-worker = "appforge.worker:main"
+appforge-seed = "appforge.seed:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["appforge"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# E501: long lines are acceptable in generated-code templates.
+# B008: `Depends(...)` in defaults is the documented FastAPI idiom.
+# UP042: `str, Enum` is deliberate for stable JSON/DB serialization on 3.11.
+ignore = ["E501", "B008", "UP042"]

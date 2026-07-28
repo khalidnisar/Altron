@@ -1,0 +1,38 @@
+# AppForge AI - Windows-native build agent
+#
+# Runs on Windows Server Core. Only needed when release artifacts must be produced
+# by Windows tooling; the Linux worker in docker-compose.yml handles the normal path.
+#
+# The base image tag must match the host kernel. Common choices:
+#   ltsc2022  -> Windows 11 / Windows Server 2022
+#   ltsc2019  -> Windows Server 2019
+ARG WINDOWS_TAG=ltsc2022
+FROM mcr.microsoft.com/windows/servercore:${WINDOWS_TAG}
+
+SHELL ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "$ErrorActionPreference='Stop';"]
+
+# Python runtime for the agent loop.
+ARG PYTHON_VERSION=3.11.9
+RUN Invoke-WebRequest -UseBasicParsing \
+        -Uri "https://www.python.org/ftp/python/$Env:PYTHON_VERSION/python-$Env:PYTHON_VERSION-amd64.exe" \
+        -OutFile python.exe; \
+    Start-Process -FilePath .\python.exe -Wait \
+        -ArgumentList '/quiet','InstallAllUsers=1','PrependPath=1','Include_test=0'; \
+    Remove-Item python.exe -Force
+
+WORKDIR C:\\app
+
+COPY requirements.txt .
+RUN python -m pip install --no-cache-dir --upgrade pip; \
+    python -m pip install --no-cache-dir -r requirements.txt
+
+COPY agent.py .
+
+RUN New-Item -ItemType Directory -Force -Path C:\\data\\artifacts | Out-Null
+
+ENV APPFORGE_STORAGE_ROOT=C:\\data\\artifacts
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD powershell -NoProfile -Command "if (Test-Path C:\app\agent.py) { exit 0 } else { exit 1 }"
+
+CMD ["python", "agent.py"]

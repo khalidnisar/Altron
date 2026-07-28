@@ -1,0 +1,43 @@
+# AppForge AI - Windows-container overlay
+#
+# WHEN YOU NEED THIS
+#   Only if your organisation standardises on Windows build agents, or you must run
+#   Windows-only tooling (signed MSI packaging, Windows-only SDKs) inside a container.
+#   The default Linux stack in docker-compose.yml is faster, smaller, and recommended
+#   for everything else.
+#
+# IMPORTANT
+#   Docker Desktop runs EITHER Linux OR Windows containers at a time - not both.
+#   Switch with:  & $Env:ProgramFiles\Docker\Docker\DockerCli.exe -SwitchDaemon
+#   Windows containers also require a matching host build (Server Core 2022 needs
+#   Windows 10/11 22H2 or Server 2022) because of kernel version binding.
+#
+# USAGE (after switching Docker Desktop to Windows containers)
+#   docker compose -f docker-compose.windows.yml up -d --build
+#
+name: appforge-windows
+
+services:
+  # Windows-native build agent. Produces release artifacts for generated apps
+  # using the Windows toolchain, then drops them on the shared volume where the
+  # API can serve them.
+  build-agent:
+    build:
+      context: ./services/build-agent
+      dockerfile: Dockerfile.windows
+    environment:
+      APPFORGE_API_URL: ${APPFORGE_API_URL:-http://host.docker.internal:8000}
+      APPFORGE_OPERATOR_TOKEN: ${APPFORGE_OPERATOR_TOKEN:-}
+      APPFORGE_AGENT_NAME: windows-build-agent
+    volumes:
+      - artifacts-win:C:\\data\\artifacts
+    # Windows containers reach the host (and the Linux stack) via host.docker.internal.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    # Process isolation matches the host kernel; use "hyperv" for stronger isolation
+    # on client Windows if your host supports it.
+    isolation: process
+
+volumes:
+  artifacts-win:

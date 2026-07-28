@@ -1,0 +1,29 @@
+# Environment
+.env
+.env.local
+secrets/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# Runtime artifacts (generated apps, logos, screenshots)
+data/
+artifacts/
+
+# OS
+.DS_Store
+Thumbs.db
