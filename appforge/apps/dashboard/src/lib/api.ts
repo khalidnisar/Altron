@@ -88,6 +88,8 @@ export type Project = {
   repository_url?: string | null; simulator_url?: string | null;
   play_store_url?: string | null; approved_at?: string | null;
   created_at?: string | null;
+  source_app_name?: string | null;
+  approvals?: Record<string, { by: string; at: string; feedback?: string }> | null;
 };
 
 export type ProjectDetail = Project & {
@@ -95,6 +97,7 @@ export type ProjectDetail = Project & {
   design_assets?: any; patched_issues?: any[] | null;
   new_features?: string[] | null; tech_stack?: any;
   build_logs?: { timestamp: string; stage: string; message: string; status: string }[] | null;
+  remediation_history?: { attempt: number; requested_at: string; reasons: string[]; source: string }[] | null;
   test_results?: any; store_listing?: any; monetization_config?: any;
   rollout_status?: any; version_history?: any[] | null; ltv?: number | null;
   source_app?: ViralApp | null;
@@ -132,7 +135,9 @@ export const api = {
   project: (id: number) => request<ProjectDetail>(`/projects/${id}`),
   projectPipeline: (id: number) =>
     request<{ current_stage: string; progress: number; awaiting_approval: boolean;
-      stages: { stage: string; state: string; has_gate: boolean }[] }>(`/projects/${id}/pipeline`),
+      approvals: Record<string, { by: string; at: string }>;
+      stages: { stage: string; state: string; has_gate: boolean; approved: boolean }[] }>(
+      `/projects/${id}/pipeline`),
   pipelineStatus: () => request<PipelineStatus>('/pipeline/status'),
   agents: () => request<AgentStatus>('/agents/status'),
   revenue: (days = 30) => request<Revenue>(`/revenue?days=${days}`),

@@ -238,6 +238,8 @@ class CloneProject(Base):
     # Testing
     build_logs: Mapped[list | None] = mapped_column(JSON)
     test_results: Mapped[dict | None] = mapped_column(JSON)
+    #: One entry per automated fix attempt; bounds the test->fix->test loop.
+    remediation_history: Mapped[list | None] = mapped_column(JSON, default=list)
 
     # Publishing
     simulator_url: Mapped[str | None] = mapped_column(Text)
@@ -246,10 +248,15 @@ class CloneProject(Base):
     version_history: Mapped[list | None] = mapped_column(JSON)
     rollout_status: Mapped[dict | None] = mapped_column(JSON)
 
-    # Approval gate (blueprint: HUMAN APPROVAL between TEST and PUBLISH)
+    # Approval gates. The blueprint has TWO human gates (after analysis, and
+    # after testing before publishing). A single timestamp cannot represent both:
+    # reusing one field lets a gate-1 approval satisfy gate 2 and auto-publish.
+    # `approvals` records one entry per gate, keyed by the stage approved.
     approved_by: Mapped[str | None] = mapped_column(String(200))
     approved_at: Mapped[datetime | None] = mapped_column(DateTime)
     approval_feedback: Mapped[str | None] = mapped_column(Text)
+    #: {stage: {"by": str, "at": iso8601, "feedback": str}}
+    approvals: Mapped[dict | None] = mapped_column(JSON, default=dict)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -346,3 +353,40 @@ class LiveMonitor(Base):
     anomalies: Mapped[list | None] = mapped_column(JSON)
     actions_taken: Mapped[list | None] = mapped_column(JSON)
     halted: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+# --------------------------------------------------------------------------
+# Approval helpers
+# --------------------------------------------------------------------------
+
+#: Stages that require an explicit human decision before work continues.
+HUMAN_GATES: set[str] = {
+    PipelineStage.AWAITING_APPROVAL.value,
+    PipelineStage.SIMULATION.value,
+}
+
+
+def record_approval(
+    project: CloneProject, stage: str, by: str, feedback: str | None = None
+) -> None:
+    """Record an approval for one specific stage.
+
+    Stored per stage so an approval at the analysis gate can never satisfy the
+    pre-publish gate.
+    """
+    approvals = dict(project.approvals or {})
+    approvals[stage] = {
+        "by": by,
+        "at": datetime.utcnow().isoformat() + "Z",
+        "feedback": feedback,
+    }
+    project.approvals = approvals
+    # Mirrored onto the flat columns for convenient display/sorting.
+    project.approved_by = by
+    project.approved_at = datetime.utcnow()
+    project.approval_feedback = feedback
+
+
+def is_stage_approved(project: CloneProject, stage: str) -> bool:
+    """True only when that exact stage has been approved by a human."""
+    return stage in (project.approvals or {})

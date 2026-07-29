@@ -2,9 +2,32 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 COMPLEXITY_POINTS = {"low": 15, "medium": 10, "high": 5, "very_high": 0}
+
+
+# Multi-word phrases are matched as substrings; single tokens are matched on
+# word boundaries. Matching "ai" as a substring wrongly flagged "Email",
+# "Detailed", and "Available" as high complexity, corrupting the feasibility
+# score and the recommended MVP scope.
+_VERY_HIGH_PHRASES = ["real-time streaming", "augmented reality", "3d render",
+                      "video call", "live streaming", "face tracking"]
+_VERY_HIGH_TOKENS = {"ar", "vr", "blockchain", "metaverse"}
+
+_HIGH_PHRASES = ["machine learning", "real time", "on-device model"]
+_HIGH_TOKENS = {"ai", "ml", "video", "live", "encryption", "wearable",
+                "recommendation", "streaming", "transcription"}
+
+_MEDIUM_PHRASES = ["push notification", "in-app purchase"]
+_MEDIUM_TOKENS = {"sync", "cloud", "social", "payment", "payments", "map",
+                  "maps", "chat", "notification", "notifications", "backup",
+                  "collaboration", "offline"}
+
+
+def _tokens(text: str) -> set[str]:
+    return set(re.findall(r"[a-z0-9]+", text.lower()))
 
 
 def estimate_complexity(features: list[str] | None) -> str:
@@ -12,15 +35,13 @@ def estimate_complexity(features: list[str] | None) -> str:
     if not features:
         return "low"
     text = " ".join(features).lower()
-    very_high = ["real-time streaming", "ar ", "augmented", "3d render", "blockchain", "video call"]
-    high = ["ai", "machine learning", "video", "live", "encryption", "wearable", "recommendation"]
-    medium = ["sync", "cloud", "social", "payment", "map", "chat", "notification"]
+    tokens = _tokens(text)
 
-    if any(k in text for k in very_high):
+    if any(p in text for p in _VERY_HIGH_PHRASES) or (tokens & _VERY_HIGH_TOKENS):
         return "very_high"
-    if any(k in text for k in high):
+    if any(p in text for p in _HIGH_PHRASES) or (tokens & _HIGH_TOKENS):
         return "high"
-    if any(k in text for k in medium):
+    if any(p in text for p in _MEDIUM_PHRASES) or (tokens & _MEDIUM_TOKENS):
         return "medium"
     return "low"
 

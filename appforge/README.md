@@ -91,8 +91,21 @@ Two gates require a person, and the pipeline **will not** cross them on its own:
 1. **After analysis** — approve the clone thesis before design and build begin.
 2. **After testing** — try the build in the simulator before Play Store submission.
 
-The Publishing Agent independently re-checks approval and refuses to submit without it.
-Both behaviours are covered by tests that fail if the gate is removed.
+Approvals are recorded **per stage** in `clone_projects.approvals`. This matters: an
+earlier design of this system used a single `approved_at` timestamp for both gates,
+which meant approving the analysis silently authorised a Play Store submission. A
+gate-1 approval can no longer satisfy gate 2.
+
+The Publishing Agent independently re-checks the pre-publish gate and refuses to submit
+without it. Both behaviours are covered by tests that fail if the gate is removed.
+
+### Remediation loop
+
+When tests fail, a crash spike is detected, or a reviewer rejects a build, an
+`apply_fixes` task is queued. The Development Agent records the reason, converts it into
+a tracked fix item, regenerates, and re-runs testing. After
+`MAX_REMEDIATION_ATTEMPTS` (3) the project is parked as `needs_human_intervention`
+rather than looping forever. The history is visible on the project page.
 
 ---
 
@@ -169,12 +182,13 @@ npm install && npm run dev
 
 ### Verification performed
 
-- 72 backend tests pass; `ruff` clean
+- 110 backend tests pass; `ruff` clean
 - Mutation-checked: removing the approval gate or the 10-review corroboration rule makes the relevant tests fail
 - All 170 generated Dart files verified for balanced delimiters and no template leakage
 - Schema compiles against the PostgreSQL dialect; queue uses `FOR UPDATE SKIP LOCKED`
 - TypeScript clean; production build succeeds for all 9 routes
 - Live API + dashboard run together: all 12 endpoints return 200, all 6 pages render real data, approve → design → build → test executes, and the publish gate holds
+- A post-build audit found and fixed 12 defects (see `docs/AUDIT.md`), each pinned by a regression test that fails against the old behaviour
 
 ---
 

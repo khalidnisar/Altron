@@ -141,11 +141,17 @@ class GrowthAgent(BaseAgent):
         if not rollout or halted:
             return False
         stages = rollout.get("stages", [])
-        current = rollout.get("current_stage", 1)
+        current = rollout.get("current_stage", 1)  # 1-based stage number
         if current >= len(stages):
             return False
-        next_stage = stages[current]  # zero-indexed list, current is 1-based
-        if not next_stage.get("auto_advance"):
+
+        # stages[current] is the NEXT stage (list is 0-indexed, current is 1-based).
+        # `auto_advance` belongs to the stage we are LEAVING: the blueprint marks
+        # internal/closed testing as manual, so leaving them needs a human. Reading
+        # the flag off the next stage let a project skip closed testing entirely.
+        leaving_stage = stages[current - 1]
+        next_stage = stages[current]
+        if not leaving_stage.get("auto_advance"):
             return False
         if crash_free < 99.5:
             return False

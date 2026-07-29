@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-
 import pytest
 from sqlalchemy import select
 
@@ -15,6 +13,7 @@ from appforge.models import (
     PipelineStage,
     TaskStatus,
     ViralApp,
+    record_approval,
 )
 from appforge.orchestrator import Orchestrator
 from appforge.seed import seed_niches
@@ -199,8 +198,7 @@ def live_project(seeded):
     _run_queue(seeded)
 
     project = seeded.scalars(select(CloneProject)).first()
-    project.approved_by = "test"
-    project.approved_at = datetime.utcnow()
+    record_approval(project, PipelineStage.AWAITING_APPROVAL.value, "test")
     seeded.add(AgentTask(agent_type="design", task_type="generate_brand",
                          project_id=project.id, priority=80))
     seeded.commit()
@@ -249,7 +247,9 @@ def test_publishing_requires_human_approval(seeded, live_project):
     """Publishing must refuse to run before the simulation gate is approved."""
     from appforge.agents.publishing import PublishingAgent
 
-    live_project.approved_at = None  # revoke the design-stage approval
+    # Clear every approval so the pre-publish gate is genuinely unmet.
+    live_project.approvals = {}
+    live_project.approved_at = None
     seeded.flush()
 
     task = AgentTask(agent_type="publishing", task_type="publish",
@@ -263,7 +263,7 @@ def test_publishing_requires_human_approval(seeded, live_project):
 
 
 def test_full_pipeline_reaches_live(seeded, live_project):
-    live_project.approved_at = datetime.utcnow()
+    record_approval(live_project, PipelineStage.SIMULATION.value, "test")
     seeded.add(AgentTask(agent_type="publishing", task_type="publish",
                          project_id=live_project.id, priority=80))
     seeded.commit()
@@ -282,7 +282,7 @@ def test_full_pipeline_reaches_live(seeded, live_project):
 
 
 def test_rollout_starts_at_internal_track(seeded, live_project):
-    live_project.approved_at = datetime.utcnow()
+    record_approval(live_project, PipelineStage.SIMULATION.value, "test")
     seeded.add(AgentTask(agent_type="publishing", task_type="publish",
                          project_id=live_project.id))
     seeded.commit()
@@ -297,7 +297,7 @@ def test_rollout_starts_at_internal_track(seeded, live_project):
 
 
 def test_monetization_respects_regional_pricing(seeded, live_project):
-    live_project.approved_at = datetime.utcnow()
+    record_approval(live_project, PipelineStage.SIMULATION.value, "test")
     seeded.add(AgentTask(agent_type="publishing", task_type="publish",
                          project_id=live_project.id))
     seeded.commit()

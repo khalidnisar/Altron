@@ -79,6 +79,9 @@ class ProjectOut(BaseModel):
     approved_at: datetime | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
+    #: Denormalised so the pipeline board can show provenance without N+1 fetches.
+    source_app_name: str | None = None
+    approvals: dict[str, Any] | None = None
 
 
 class ProjectDetail(ProjectOut):
@@ -89,6 +92,7 @@ class ProjectDetail(ProjectOut):
     tech_stack: dict[str, Any] | None = None
     build_logs: list[Any] | None = None
     test_results: dict[str, Any] | None = None
+    remediation_history: list[Any] | None = None
     store_listing: dict[str, Any] | None = None
     monetization_config: dict[str, Any] | None = None
     rollout_status: dict[str, Any] | None = None

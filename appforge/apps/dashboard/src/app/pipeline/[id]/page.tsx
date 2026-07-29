@@ -60,10 +60,21 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
                         : 'bg-panel2 text-muted'
                   }`}>
                 {s.stage.replace(/_/g, ' ')}
-                {s.has_gate && <span className="ml-1" title="Human gate">●</span>}
+                {s.has_gate && (
+                  <span
+                    className={`ml-1 ${s.approved ? 'text-ok' : 'text-warn'}`}
+                    title={s.approved ? 'Human gate: approved' : 'Human gate: awaiting decision'}
+                  >
+                    {s.approved ? '✓' : '●'}
+                  </span>
+                )}
               </li>
             ))}
           </ol>
+          <p className="mt-3 text-xs text-muted">
+            ● marks a human gate. Both gates must be approved independently; an
+            approval at one gate never satisfies the other.
+          </p>
         </div>
       )}
 
@@ -225,6 +236,34 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           </div>
         )}
       </div>
+
+      {project.remediation_history && project.remediation_history.length > 0 && (
+        <div className="card border-warn/30">
+          <SectionTitle>Fix attempts</SectionTitle>
+          <p className="mb-3 text-sm text-muted">
+            Automated remediation triggered by failed tests, a crash spike, or a
+            reviewer rejection.
+          </p>
+          <ol className="space-y-3">
+            {project.remediation_history.map((r) => (
+              <li key={r.attempt} className="border-l-2 border-warn pl-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="font-medium">Attempt {r.attempt}</span>
+                  <span className="pill bg-panel2 text-muted">{r.source}</span>
+                  <span className="text-xs text-muted">
+                    {r.requested_at?.slice(0, 19).replace('T', ' ')}
+                  </span>
+                </div>
+                <ul className="mt-1 space-y-0.5">
+                  {r.reasons.map((reason) => (
+                    <li key={reason} className="text-xs text-muted">· {reason}</li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
 
       {project.build_logs && project.build_logs.length > 0 && (
         <div className="card">

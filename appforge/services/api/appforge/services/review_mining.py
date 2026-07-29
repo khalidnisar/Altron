@@ -7,6 +7,7 @@ structure of the output is identical either way.
 
 from __future__ import annotations
 
+import re
 from collections import Counter, defaultdict
 from typing import Any
 
@@ -16,24 +17,60 @@ POSITIVE_WORDS = {
 }
 NEGATIVE_WORDS = {
     "crash", "crashes", "drains", "slow", "useless", "expensive", "spyware", "ads",
-    "unusable", "lost", "broken", "bug", "terrible", "worst", "hate", "confusing",
-    "overpriced", "never", "fails",
+    "unusable", "lost", "broken", "bug", "bugs", "terrible", "worst", "hate",
+    "confusing", "overpriced", "fails", "laggy", "freezes",
 }
 
 SEVERITY_WEIGHT = {"critical": 4, "high": 3, "medium": 2, "low": 1}
 
 
-def classify_sentiment(review: dict[str, Any]) -> str:
-    """Rating-anchored sentiment with lexical override."""
-    text = (review.get("text") or "").lower()
-    rating = review.get("rating") or 3
-    pos = sum(1 for w in POSITIVE_WORDS if w in text)
-    neg = sum(1 for w in NEGATIVE_WORDS if w in text)
+#: Words that invert the polarity of a complaint term that follows them.
+NEGATORS = {"never", "no", "not", "without", "zero", "doesn't", "does",
+            "don't", "hasn't", "haven't", "isn't", "wasn't", "rarely"}
 
-    if rating >= 4 and neg == 0:
-        return "positive"
-    if rating <= 2:
-        return "negative"
+#: How far after a negator the inversion still applies.
+_NEGATION_WINDOW = 3
+
+# A negator must never also be a polarity word, or it would negate itself.
+assert not (NEGATORS & NEGATIVE_WORDS), NEGATORS & NEGATIVE_WORDS
+assert not (NEGATORS & POSITIVE_WORDS), NEGATORS & POSITIVE_WORDS
+
+
+def _count_polarity(tokens: list[str], vocabulary: set[str]) -> int:
+    """Count vocabulary hits, skipping any that sit inside a negation window.
+
+    "never crashes" and "no bugs" are praise, not complaints; counting the
+    complaint token naively flipped 5-star reviews to negative and inflated
+    the issue counts that drive the whole improvement thesis.
+    """
+    hits = 0
+    for i, token in enumerate(tokens):
+        if token not in vocabulary:
+            continue
+        window = tokens[max(0, i - _NEGATION_WINDOW):i]
+        if any(w in NEGATORS for w in window):
+            continue  # negated -> does not count toward this polarity
+        hits += 1
+    return hits
+
+
+def classify_sentiment(review: dict[str, Any]) -> str:
+    """Rating-anchored sentiment with negation-aware lexical override."""
+    text = (review.get("text") or "").lower()
+    rating = review.get("rating")
+    tokens = re.findall(r"[a-z']+", text)
+
+    pos = _count_polarity(tokens, POSITIVE_WORDS)
+    neg = _count_polarity(tokens, NEGATIVE_WORDS)
+
+    # The star rating is the strongest available signal; trust it first.
+    if rating is not None:
+        if rating >= 4:
+            # Only override a high rating on an un-negated complaint.
+            return "negative" if neg > pos else "positive"
+        if rating <= 2:
+            return "negative"
+
     if neg > pos:
         return "negative"
     if pos > neg:

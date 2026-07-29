@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from appforge.agents.base import AgentResult, BaseAgent
-from appforge.models import AgentTask, PipelineStage
+from appforge.models import AgentTask, PipelineStage, is_stage_approved
 from appforge.services.providers import LLMProvider, PlayConsoleProvider
 
 ROLLOUT_STAGES = [
@@ -119,8 +119,11 @@ class PublishingAgent(BaseAgent):
         return [
             {"item": "Testing criteria passed", "required": True,
              "passed": bool(tests.get("overall_passed"))},
-            {"item": "Human approval received", "required": self.settings.require_human_approval,
-             "passed": project.approved_at is not None},
+            # Must be the PRE-PUBLISH gate specifically. An approval recorded at
+            # the earlier analysis gate must not authorise a store submission.
+            {"item": "Human approval received (pre-publish gate)",
+             "required": self.settings.require_human_approval,
+             "passed": is_stage_approved(project, PipelineStage.SIMULATION.value)},
             {"item": "Privacy policy URL valid", "required": True, "passed": True,
              "note": "Generated policy hosted with the app listing"},
             {"item": "Terms of service URL valid", "required": True, "passed": True},

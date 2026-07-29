@@ -9,7 +9,15 @@ from random import Random
 from sqlalchemy import func, select
 
 from appforge.db import init_db, session_scope
-from appforge.models import AgentTask, CloneProject, Earning, Niche, PipelineStage
+from appforge.models import (
+    AgentTask,
+    CloneProject,
+    Earning,
+    Niche,
+    PipelineStage,
+    ViralApp,
+    record_approval,
+)
 from appforge.orchestrator import Orchestrator
 from appforge.services.providers import NICHE_CATEGORIES
 
@@ -126,11 +134,9 @@ def seed(run_pipeline: bool = True, auto_approve: bool = True) -> dict:
                     CloneProject.pipeline_stage == PipelineStage.AWAITING_APPROVAL.value
                 ).limit(3)
             ).all()
-            from datetime import datetime
-
             for project in pending:
-                project.approved_by = "seed"
-                project.approved_at = datetime.utcnow()
+                record_approval(project, PipelineStage.AWAITING_APPROVAL.value, "seed",
+                                "Auto-approved by seed")
                 project.status = "design_queued"
                 session.add(AgentTask(
                     agent_type="design", task_type="generate_brand",
@@ -146,16 +152,14 @@ def seed(run_pipeline: bool = True, auto_approve: bool = True) -> dict:
 
         # Approve at the simulation gate, then publish -> monetize -> grow.
         with session_scope() as session:
-            from datetime import datetime
-
             ready = session.scalars(
                 select(CloneProject).where(
                     CloneProject.pipeline_stage == PipelineStage.SIMULATION.value
                 )
             ).all()
             for project in ready:
-                project.approved_by = "seed"
-                project.approved_at = datetime.utcnow()
+                record_approval(project, PipelineStage.SIMULATION.value, "seed",
+                                "Auto-approved by seed")
                 session.add(AgentTask(
                     agent_type="publishing", task_type="publish",
                     project_id=project.id, priority=80,
@@ -171,13 +175,6 @@ def seed(run_pipeline: bool = True, auto_approve: bool = True) -> dict:
             summary["earnings_rows"] = backfill_earnings(session)
 
     with session_scope() as session:
-        summary["apps_discovered"] = session.scalar(
-            select(func.count()).select_from(
-                select(Niche).subquery()
-            )
-        )
-        from appforge.models import ViralApp
-
         summary["apps_discovered"] = session.scalar(select(func.count(ViralApp.id))) or 0
         summary["projects"] = session.scalar(select(func.count(CloneProject.id))) or 0
         summary["live_projects"] = session.scalar(

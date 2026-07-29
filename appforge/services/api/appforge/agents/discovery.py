@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from appforge.agents.base import AgentResult, BaseAgent
 from appforge.models import AgentTask, AppStatus, Niche, ViralApp
@@ -122,12 +122,47 @@ class DiscoveryAgent(BaseAgent):
                     )
                     stats["queued"] += 1
 
+        # Real count of apps recorded for this niche.
         niche.app_count = self.session.scalar(
-            select(ViralApp).where(ViralApp.niche_id == niche.id).with_only_columns(ViralApp.id)
-        ) and len(raw_apps) or len(raw_apps)
+            select(func.count(ViralApp.id)).where(ViralApp.niche_id == niche.id)
+        ) or 0
+
+        # Recompute saturation from observed data instead of leaving the seeded
+        # constant in place: a niche dominated by a few huge, well-rated
+        # incumbents is harder to enter than a fragmented one.
+        niche.saturation = self._estimate_saturation(niche.id)
 
         return AgentResult(
             success=True,
             output=stats,
             message=f"{slug}: scanned {stats['scanned']}, queued {stats['queued']}",
         )
+
+    def _estimate_saturation(self, niche_id: int) -> float:
+        """Estimate 0..1 market saturation for a niche.
+
+        Combines download concentration among the top players with how satisfied
+        their users already are. Both push a niche toward "hard to enter".
+        """
+        apps = self.session.scalars(
+            select(ViralApp).where(ViralApp.niche_id == niche_id)
+        ).all()
+        if len(apps) < 2:
+            return 0.5  # not enough signal; stay neutral
+
+        downloads = sorted((a.total_downloads or 0 for a in apps), reverse=True)
+        total = sum(downloads)
+        if total <= 0:
+            return 0.5
+
+        # Share held by the top 3 apps: high concentration => saturated.
+        concentration = sum(downloads[:3]) / total
+
+        # Mean rating: a niche where incumbents already delight users leaves
+        # less room for an improved clone.
+        ratings = [a.rating for a in apps if a.rating]
+        satisfaction = ((sum(ratings) / len(ratings)) - 3.0) / 2.0 if ratings else 0.5
+        satisfaction = max(0.0, min(1.0, satisfaction))
+
+        saturation = 0.6 * concentration + 0.4 * satisfaction
+        return round(max(0.05, min(0.95, saturation)), 3)

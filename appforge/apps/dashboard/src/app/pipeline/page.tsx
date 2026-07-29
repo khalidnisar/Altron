@@ -59,6 +59,9 @@ export default async function PipelinePage() {
               <Link key={p.id} href={`/pipeline/${p.id}`}
                     className="rounded-lg border border-edge bg-panel p-3 hover:border-warn/50">
                 <div className="font-medium">{p.clone_name}</div>
+                {p.source_app_name && (
+                  <div className="text-[11px] text-muted">from {p.source_app_name}</div>
+                )}
                 <div className="mt-1 text-xs text-muted">
                   {p.pipeline_stage === 'simulation'
                     ? 'Test in simulator, then approve for publishing'
@@ -94,6 +97,11 @@ export default async function PipelinePage() {
                         className="block rounded-lg border border-edge bg-panel p-3
                                    transition-colors hover:border-brand/50">
                     <div className="truncate text-sm font-medium">{p.clone_name}</div>
+                    {p.source_app_name && (
+                      <div className="mt-0.5 truncate text-[11px] text-muted">
+                        from {p.source_app_name}
+                      </div>
+                    )}
                     <div className="mt-1 truncate text-xs text-muted">{p.tagline}</div>
                     <div className="mt-2"><Progress value={p.progress} /></div>
                     <div className="mt-2 flex justify-between text-xs text-muted">

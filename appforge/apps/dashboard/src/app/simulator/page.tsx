@@ -42,15 +42,17 @@ export default async function SimulatorPage({
             Test the real build before approving it for the Play Store
           </p>
         </div>
-        <form method="get">
-          <label className="sr-only" htmlFor="project">Select build</label>
-          <select id="project" name="project" defaultValue={String(selectedId)}
-                  className="input" onChange={undefined}>
-            {testable.map((p) => (
-              <option key={p.id} value={p.id}>{p.clone_name}</option>
-            ))}
-          </select>
-          <button className="btn-ghost ml-2" type="submit">Load</button>
+        <form method="get" className="flex items-end gap-2">
+          <div>
+            <label className="label" htmlFor="project">Build</label>
+            <select id="project" name="project" defaultValue={String(selectedId)}
+                    className="input mt-1">
+              {testable.map((p) => (
+                <option key={p.id} value={p.id}>{p.clone_name}</option>
+              ))}
+            </select>
+          </div>
+          <button className="btn-ghost" type="submit">Load</button>
         </form>
       </div>
 

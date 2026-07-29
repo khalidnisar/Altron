@@ -2,19 +2,21 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from appforge.db import get_session
 from appforge.models import (
+    HUMAN_GATES,
     STAGE_ORDER,
     AgentTask,
     CloneProject,
     PipelineEvent,
     PipelineStage,
+    TaskStatus,
+    is_stage_approved,
+    record_approval,
 )
 from appforge.routers.deps import require_operator
 from appforge.schemas import (
@@ -56,7 +58,19 @@ def list_projects(
         "progress": CloneProject.progress,
         "revenue": CloneProject.monthly_revenue,
     }[sort_by]
-    return session.scalars(stmt.order_by(column.desc())).all()
+
+    # Eager-load the source app: the board renders provenance for every card,
+    # which would otherwise be one lazy query per project.
+    projects = session.scalars(
+        stmt.options(joinedload(CloneProject.source_app)).order_by(column.desc())
+    ).unique().all()
+
+    out: list[ProjectOut] = []
+    for p in projects:
+        item = ProjectOut.model_validate(p)
+        item.source_app_name = p.source_app.name if p.source_app else None
+        out.append(item)
+    return out
 
 
 @router.get("/{project_id}", response_model=ProjectDetail)
@@ -90,9 +104,21 @@ def approve(project_id: int, body: ApprovalRequest, session: Session = Depends(g
         raise HTTPException(409, f"Stage '{stage}' has no approval gate")
 
     agent, task_type = STAGE_NEXT_AGENT[stage]
-    project.approved_by = body.approved_by
-    project.approved_at = datetime.utcnow()
-    project.approval_feedback = body.feedback
+
+    # Idempotency: a double-click (or a retried request) must not queue the same
+    # agent twice and duplicate expensive generation work.
+    existing = session.scalar(
+        select(AgentTask).where(
+            AgentTask.project_id == project.id,
+            AgentTask.agent_type == agent,
+            AgentTask.task_type == task_type,
+            AgentTask.status.in_([TaskStatus.PENDING.value, TaskStatus.RUNNING.value]),
+        )
+    )
+    if existing is not None:
+        return project
+
+    record_approval(project, stage, body.approved_by, body.feedback)
     project.status = f"{agent}_queued"
     project.blocked_reason = None
 
@@ -168,13 +194,15 @@ def project_pipeline(project_id: int, session: Session = Depends(get_session)):
             elif i == current_index:
                 state = "active"
         stages.append({"stage": stage.value, "state": state,
-                       "has_gate": stage.value in STAGE_NEXT_AGENT})
+                       "has_gate": stage.value in HUMAN_GATES,
+                       "approved": is_stage_approved(project, stage.value)})
 
     return {
         "project_id": project.id,
         "current_stage": project.pipeline_stage,
         "progress": project.progress,
-        "awaiting_approval": project.pipeline_stage in STAGE_NEXT_AGENT
-        and project.approved_at is None,
+        "awaiting_approval": project.pipeline_stage in HUMAN_GATES
+        and not is_stage_approved(project, project.pipeline_stage),
+        "approvals": project.approvals or {},
         "stages": stages,
     }
