@@ -1,0 +1,30 @@
+# Example: watch the price of a product on Amazon and notify on every change.
+#
+# Run with:
+#   altron monitor add --name amazon_price --url "https://..." --selector "#priceblock_ourprice" --interval 30m
+# then edit this file to set notify: [telegram, email].
+
+name: amazon_price
+url: https://www.amazon.com/dp/B0EXAMPLE
+interval: 30m
+selectors:
+  - "#priceblock_ourprice"
+  - "#availability .a-color-state"
+keywords:
+  - "in stock"
+  - "out of stock"
+  - "Sale"
+diff:
+  full_page_hash: true
+  ignore_selectors:
+    - "#nav-main"
+    - "#nav-footer"
+    - "#cookie-consent"
+  min_change_chars: 10
+notify:
+  - telegram
+  - email
+cooldown_seconds: 1800
+urgent_keywords:
+  - "out of stock"
+  - "back in stock"

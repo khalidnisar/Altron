@@ -24,6 +24,8 @@ api = ["fastapi>=0.110", "uvicorn[standard]>=0.29", "httpx>=0.27"]
 dashboard = ["streamlit>=1.34", "plotly>=5.20"]
 vectorbt = ["vectorbt>=0.26"]
 mt5 = ["MetaTrader5>=5.0; platform_system == 'Windows'"]
+# Website monitor: pure stdlib, no new deps beyond what Altron already requires.
+monitor = []
 desktop = [
   "PySide6>=6.7,<7",
   "keyring>=25,<27",

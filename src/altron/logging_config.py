@@ -28,3 +28,8 @@ def configure_logging(
         handlers=[console, file_handler],
         force=True,
     )
+
+
+def get_logger(name: str | None = None) -> logging.Logger:
+    """Return a stdlib logger; equivalent to ``logging.getLogger(name)``."""
+    return logging.getLogger(name if name is not None else "altron")

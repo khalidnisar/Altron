@@ -612,6 +612,10 @@ def main(argv: list[str] | None = None) -> int:
         return _strategy_test(argv[1:])
     if argv and argv[0] == "paper":
         return asyncio.run(_paper(argv[1:]))
+    if argv and argv[0] == "monitor":
+        from altron.monitor.cli import main as monitor_main
+
+        return monitor_main(argv[1:])
     if argv and argv[0] == "serve":
         try:
             import uvicorn

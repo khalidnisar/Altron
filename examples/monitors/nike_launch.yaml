@@ -1,0 +1,27 @@
+# Example: watch a Nike launch page for "Dropping" / "Sold Out" status changes.
+
+name: nike_launch
+url: https://www.nike.com/launch/air-max
+interval: 15m
+selectors:
+  - .ncss-btn-primary
+keywords:
+  - "Sold Out"
+  - "Dropping"
+  - "Upcoming"
+  - "Available"
+hours_of_day: "09:00-21:00"
+timezone: Asia/Dubai
+days_of_week: [thu, fri, sat]
+active_from: 2026-08-01
+active_until: 2026-12-31
+diff:
+  full_page_hash: true
+  ignore_selectors:
+    - header
+    - footer
+notify:
+  - telegram
+cooldown_seconds: 900
+urgent_keywords:
+  - "Dropping"
