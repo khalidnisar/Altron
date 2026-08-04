@@ -1,159 +1,64 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Altron PriceFinder — find the cheapest price for anything</title>
-<meta name="description" content="Search the web for the cheapest price on goods, hotels, tickets and car rentals. Live currency, coupons, geo-spoofing and incognito tools." />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%234f46e5'/%3E%3Ccircle cx='44' cy='44' r='22' fill='none' stroke='white' stroke-width='9'/%3E%3Cline x1='60' y1='60' x2='78' y2='78' stroke='white' stroke-width='9' stroke-linecap='round'/%3E%3Ccircle cx='44' cy='44' r='8' fill='%2334d399'/%3E%3C/svg%3E" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="app/styles.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Altron Study Studio</title>
+  <meta name="description" content="Turn your learning material into flashcards, mock exams and feedback." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="app/styles.css" />
 </head>
 <body>
-<div id="app">
-
-  <!-- ======= Top bar ======= -->
-  <header class="topbar">
-    <div class="topbar-inner">
-      <a class="brand" href="#" id="brandLink">
-        <span class="brand-logo">
-          <svg viewBox="0 0 100 100" width="34" height="34" aria-hidden="true">
-            <rect width="100" height="100" rx="24" fill="#4f46e5"/>
-            <circle cx="44" cy="44" r="21" fill="none" stroke="#fff" stroke-width="8"/>
-            <line x1="59" y1="59" x2="77" y2="77" stroke="#fff" stroke-width="8" stroke-linecap="round"/>
-            <circle cx="44" cy="44" r="7.5" fill="#34d399"/>
-          </svg>
-        </span>
-        <span class="brand-text"><b>Altron</b> PriceFinder</span>
-      </a>
-
-      <nav class="commodity-tabs" id="commodityTabs" role="tablist" aria-label="What are you looking for?">
-        <button class="tab is-active" data-commodity="goods" role="tab"><span class="tab-ico">🛍️</span> Goods</button>
-        <button class="tab" data-commodity="hotels" role="tab"><span class="tab-ico">🏨</span> Hotels</button>
-        <button class="tab" data-commodity="flights" role="tab"><span class="tab-ico">✈️</span> Tickets</button>
-        <button class="tab" data-commodity="cars" role="tab"><span class="tab-ico">🚗</span> Rent-a-Car</button>
-      </nav>
-
-      <div class="topbar-tools">
-        <div class="tool-group">
-          <span class="tool-label" title="Geo-spoofing — search as if you were browsing from this location">📍 Geo</span>
-          <select id="geoSelect" class="select geo-select" aria-label="Spoofed location"></select>
-        </div>
-        <div class="tool-group">
-          <span class="tool-label" title="Currency to display all prices in">💱 Show in</span>
-          <select id="currencySelect" class="select currency-select" aria-label="Display currency"></select>
-        </div>
-        <button class="pill-btn" id="incognitoBtn" title="Incognito mode — strips cookies &amp; personalization so retailers can't mark up your price" aria-pressed="false">
-          <span class="pill-ico">🕶️</span><span class="pill-txt">Incognito</span><span class="pill-state" id="incognitoState">off</span>
-        </button>
-        <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings">⚙️</button>
-        <button class="icon-btn" id="aboutBtn" title="How it works" aria-label="About">ⓘ</button>
-      </div>
+<div class="shell">
+  <aside class="sidebar">
+    <a class="logo" href="#"><span class="logo-mark">A</span><span>altron<span class="logo-dot">.</span></span></a>
+    <div class="workspace-switch"><span class="avatar">IM</span><span><b>IMAT Prep</b><small>Study workspace</small></span><span class="chev">⌄</span></div>
+    <nav>
+      <button class="nav-item active" data-view="home"><span>⌂</span>Overview</button>
+      <button class="nav-item" data-view="library"><span>▱</span>Learning library <i id="docCount">04</i></button>
+      <button class="nav-item" data-view="flashcards"><span>▣</span>Flashcards</button>
+      <button class="nav-item" data-view="practice"><span>✓</span>Practice tests</button>
+      <button class="nav-item" data-view="progress"><span>↗</span>Progress</button>
+    </nav>
+    <div class="sidebar-bottom">
+      <button class="nav-item"><span>⚙</span>Settings</button>
+      <div class="user"><span class="user-photo">KN</span><span><b>Khalid Nisar</b><small>Free plan</small></span><button>···</button></div>
     </div>
-    <div class="status-strip" id="statusStrip" hidden></div>
-  </header>
+  </aside>
 
-  <!-- ======= Hero / search ======= -->
   <main class="main">
-    <section class="hero">
-      <h1 class="hero-title">Find the <span class="grad">cheapest</span> price anywhere on the web</h1>
-      <p class="hero-sub">Search goods, hotels, flights and car rentals across trusted retailers — with coupons, live currency, geo-spoofing and incognito mode.</p>
+    <header class="topbar"><div><p class="eyebrow">TUESDAY, AUGUST 4</p><h1 id="pageTitle">Good morning, Khalid <span>✦</span></h1></div><div class="header-actions"><button class="help">?</button><button class="bell">♧<i></i></button></div></header>
 
-      <div class="searchbox-wrap">
-        <div class="searchbox" id="searchbox">
-          <span class="searchbox-ico">🔍</span>
-          <input id="searchInput" class="search-input" type="text" autocomplete="off" spellcheck="false"
-                 placeholder="Try “iPhone 15 Pro”, “hotels in Dubai”, “flight London to Dubai”, “rent a car in Lahore”…" />
-          <button class="btn btn-primary btn-search" id="searchBtn">Find cheapest</button>
-        </div>
-        <div class="image-upload-row">
-          <label class="dropzone" id="dropzone" title="Upload a photo of the product — or press Ctrl+V to paste one">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            <span>Search by photo</span>
-            <input type="file" id="imageInput" accept="image/*" hidden />
-          </label>
-          <button class="btn btn-ghost" id="sampleSearchBtn">✨ Try a sample search</button>
-          <span class="upload-hint">Drag &amp; drop · paste · or tap to upload</span>
-        </div>
-        <div id="imagePreview" class="image-preview" hidden>
-          <img id="imagePreviewImg" alt="Uploaded product photo" />
-          <div class="image-preview-meta">
-            <b id="imagePreviewName">photo.png</b>
-            <span id="imagePreviewStatus">Analyzing visual fingerprint…</span>
-            <button class="btn btn-ghost btn-xs" id="removeImageBtn">✕ Remove</button>
-          </div>
-        </div>
-      </div>
+    <section id="homeView" class="view active-view">
+      <div class="hero"><div class="hero-copy"><span class="hero-kicker">YOUR NEXT BEST STEP</span><h2>Keep your momentum going.</h2><p>You are building strong recall across your IMAT biology material.</p><button class="dark-btn" data-go="flashcards">Resume flashcards <span>→</span></button></div><div class="hero-art"><div class="orbit o1"></div><div class="orbit o2"></div><div class="spark s1">✦</div><div class="spark s2">✧</div><div class="study-card c1"><b>DNA</b><span>replication</span></div><div class="study-card c2"><b>93%</b><span>mastery</span></div><div class="hero-person">✦</div></div></div>
 
-      <div class="quick-chips" id="quickChips"></div>
+      <div class="stat-grid"><article><span class="stat-icon purple">▣</span><div><b>128</b><p>Cards reviewed</p></div><em>+18%</em></article><article><span class="stat-icon orange">◴</span><div><b>4.2 hrs</b><p>Study time this week</p></div><em>+32m</em></article><article><span class="stat-icon green">◎</span><div><b>76%</b><p>Average accuracy</p></div><em>+4.8%</em></article></div>
+
+      <div class="two-col"><section class="panel continue"><div class="section-head"><div><h3>Continue learning</h3><p>Pick up where you left off</p></div><button class="text-btn" data-go="library">View library →</button></div><div class="course-row"><div class="file-icon pdf">PDF</div><div class="course-info"><b>Cell Biology & Genetics</b><p>Chapter 04 · DNA replication</p><div class="progress"><span style="width:68%"></span></div><small>68% complete</small></div><button class="circle-btn" data-go="flashcards">→</button></div><div class="course-row"><div class="file-icon pdf">PDF</div><div class="course-info"><b>Human Physiology</b><p>Chapter 02 · Cardiovascular system</p><div class="progress"><span style="width:36%"></span></div><small>36% complete</small></div><button class="circle-btn" data-go="flashcards">→</button></div></section>
+      <section class="panel topics"><div class="section-head"><div><h3>Topic mastery</h3><p>Based on your last 30 answers</p></div><button class="dots">•••</button></div><div class="topic"><span>Cell biology</span><div class="bar"><i style="width:88%"></i></div><b>88%</b></div><div class="topic"><span>Genetics</span><div class="bar"><i style="width:72%"></i></div><b>72%</b></div><div class="topic"><span>Human physiology</span><div class="bar"><i style="width:64%"></i></div><b>64%</b></div><div class="topic"><span>General chemistry</span><div class="bar"><i style="width:51%"></i></div><b>51%</b></div></section></div>
+      <section class="panel upcoming"><div class="section-head"><div><h3>Ready when you are</h3><p>Generated from your uploaded material</p></div><button class="text-btn" data-go="practice">Build a test →</button></div><div class="test-teaser"><div class="teaser-icon">✎</div><div><b>IMAT Biology — adaptive mock</b><p>30 questions · 45 min · Cells, genetics & physiology</p></div><span class="tag">NEW</span><button class="outline-btn" data-go="practice">Start practice</button></div></section>
     </section>
 
-    <!-- ======= Results ======= -->
-    <section class="results" id="results" aria-live="polite">
-      <!-- filled by app/ui.js -->
+    <section id="libraryView" class="view">
+      <div class="view-title"><div><p class="eyebrow">SOURCE MATERIAL</p><h2>Learning library</h2><p>Upload up to 20 PDFs. Altron uses them as the only source for questions and cards.</p></div><button class="dark-btn" id="uploadBtn">+ Add PDFs</button><input id="pdfInput" type="file" accept="application/pdf" multiple hidden></div>
+      <div class="source-note"><span>✦</span><div><b>Grounded learning</b><p>Every card and question is linked back to the material you add here. Add a past paper to match its format and difficulty.</p></div></div>
+      <div class="doc-grid" id="docGrid"></div>
+      <div class="upload-zone" id="dropZone"><b>Drop PDFs here or <button id="browseLink">browse files</button></b><p>PDF only · up to 20 documents per workspace</p></div>
     </section>
+
+    <section id="flashcardsView" class="view flash-view"><div class="view-title"><div><p class="eyebrow">ACTIVE RECALL</p><h2>Flashcards</h2><p>Generated from Cell Biology & Genetics · 24 cards</p></div><div class="card-count"><b id="cardNum">1</b> / 24</div></div><div class="flashcard-wrap"><button class="side-arrow" id="prevCard">←</button><div class="flashcard" id="flashcard"><span class="card-label">CONCEPT</span><h2 id="cardQuestion">What is the primary role of DNA polymerase during replication?</h2><p class="flip-hint">Click to reveal answer</p><div class="card-answer" id="cardAnswer"><span class="card-label">ANSWER</span><p>DNA polymerase synthesises a new DNA strand by adding complementary nucleotides to the 3′ end of the growing strand.</p><small>Source: Cell Biology & Genetics · p. 42</small></div></div><button class="side-arrow" id="nextCard">→</button></div><div class="recall-actions"><button class="recall hard" data-rate="Hard">← Hard</button><button class="recall good" data-rate="Good">Good</button><button class="recall easy" data-rate="Easy">Easy →</button></div></section>
+
+    <section id="practiceView" class="view">
+      <div class="view-title"><div><p class="eyebrow">EXAM BUILDER</p><h2>Build a practice test</h2><p>Create an original, source-grounded test in the style of your past papers.</p></div></div>
+      <div class="builder"><div class="builder-main"><h3>Test setup</h3><label>Test name<input id="testName" value="IMAT Biology — Mock 01"></label><div class="field-row"><label>Questions<select id="questionCount"><option>10</option><option selected>20</option><option>30</option><option>40</option></select></label><label>Time limit<select><option>20 minutes</option><option selected>30 minutes</option><option>45 minutes</option><option>60 minutes</option></select></label></div><h4>Source material</h4><div class="source-select"><span class="check">✓</span><span><b>Cell Biology & Genetics</b><small>Core learning material</small></span><span class="check">✓</span><span><b>IMAT 2024 Past Paper</b><small>Question style reference</small></span></div><button class="dark-btn wide" id="generateTest">Generate practice test <span>→</span></button></div><aside class="scoring"><span class="mini-label">SCORING RULES</span><h3>Make it yours</h3><label>Passing score <div class="suffix-input"><input id="passMark" type="number" value="60" min="0" max="100"><span>%</span></div></label><label>Correct answer <div class="suffix-input"><input id="correctMark" type="number" value="1" step="0.5"><span>marks</span></div></label><label>Wrong answer <div class="suffix-input negative"><input id="negativeMark" type="number" value="-0.25" step="0.25"><span>marks</span></div></label><p class="scoring-note">Unanswered questions receive 0 marks. Your final score will be shown as a percentage.</p></aside></div>
+      <div id="examArea"></div>
+    </section>
+
+    <section id="progressView" class="view"><div class="view-title"><div><p class="eyebrow">YOUR PERFORMANCE</p><h2>Progress insights</h2><p>A clear view of what to revise next.</p></div></div><div class="insight-grid"><article class="panel score-card"><p>ESTIMATED EXAM READINESS</p><b>76<span>%</span></b><div class="progress"><span style="width:76%"></span></div><small>Up 4.8% from last week</small></article><article class="panel streak"><span>🔥</span><h3>6 day streak</h3><p>You're building a strong habit. One quick review today keeps it going.</p></article></div><section class="panel weak"><h3>Suggested focus</h3><div><span>01</span><p><b>General chemistry</b><br>Accuracy is 51%. Try a focused 10-card review.</p><button class="outline-btn" data-go="flashcards">Review cards</button></div><div><span>02</span><p><b>Human physiology</b><br>Last test: 5 incorrect answers on circulation.</p><button class="outline-btn" data-go="practice">Practice now</button></div></section></section>
   </main>
-
-  <footer class="footer">
-    <div class="footer-inner">
-      <span><b>Altron PriceFinder</b> · scans the open web for the lowest trusted price. Not affiliated with any retailer.</span>
-      <span id="fxStatus" class="fx-status">Exchange rates: loading…</span>
-      <span class="footer-note">Prices refresh on every search. Coupons are auto-validated against expiry dates.</span>
-    </div>
-  </footer>
 </div>
-
-<!-- ======= Settings modal ======= -->
-<div class="modal-backdrop" id="settingsModal" hidden>
-  <div class="modal">
-    <div class="modal-head"><h2>⚙️ Settings</h2><button class="icon-btn" data-close>✕</button></div>
-    <div class="modal-body">
-      <label class="field">
-        <span class="field-label">SerpAPI key <em>(optional — enables live web search)</em></span>
-        <input type="password" id="serpKeyInput" class="text-input" placeholder="Paste your SerpAPI key (stored only in this browser)" />
-        <span class="field-hint">Without a key the app runs in <b>demo mode</b> with a realistic marketplace dataset. With a key it searches Google Shopping / Lens / Hotels / Flights / Maps live through the local proxy.</span>
-      </label>
-      <label class="field">
-        <span class="field-label">Trusted sources only</span>
-        <label class="switch"><input type="checkbox" id="trustFilterInput" checked /><span class="switch-slider"></span><span class="switch-label">Hide low-footfall / spam-looking merchants (recommended)</span></label>
-      </label>
-      <label class="field">
-        <span class="field-label">Scan the web for coupon codes <em>(live search mode)</em></span>
-        <label class="switch"><input type="checkbox" id="scanCouponsInput" checked /><span class="switch-slider"></span><span class="switch-label">Also search the web for promo codes per product (marked as unverified)</span></label>
-      </label>
-      <label class="field">
-        <span class="field-label">Default location spoof</span>
-        <select id="defaultGeoInput" class="select"></select>
-        <span class="field-hint">Prices &amp; availability are re-quoted as if you were browsing from this location.</span>
-      </label>
-      <label class="field">
-        <span class="field-label">Incognito mode by default</span>
-        <label class="switch"><input type="checkbox" id="defaultIncognitoInput" /><span class="switch-slider"></span><span class="switch-label">Start each session with cookies stripped</span></label>
-      </label>
-    </div>
-    <div class="modal-foot"><button class="btn btn-primary" data-close>Done</button></div>
-  </div>
-</div>
-
-<!-- ======= About modal ======= -->
-<div class="modal-backdrop" id="aboutModal" hidden>
-  <div class="modal">
-    <div class="modal-head"><h2>How Altron PriceFinder works</h2><button class="icon-btn" data-close>✕</button></div>
-    <div class="modal-body about-body">
-      <p><b>1 · Search.</b> Type a product, hotel, route or city — or upload a photo. PriceFinder queries trusted retailers and travel metasearch engines across the web.</p>
-      <p><b>2 · Compare.</b> Every quote is normalised into your chosen currency and ranked <b>lowest → highest</b>. The bar at the top shows the full price spread; green = lowest, red = highest.</p>
-      <p><b>3 · Get the edge.</b> 🕶️ <b>Incognito</b> strips cookies &amp; personalization so retailers can’t price-markup your history. 📍 <b>Geo-spoofing</b> re-quotes prices from another country (flights &amp; hotels often differ by origin). 🏷️ <b>Coupons</b> are auto-searched and only *verified, unexpired* codes are shown.</p>
-      <p><b>4 · Buy.</b> Hit <b>Buy</b> on any quote — it opens the real retailer page with your search pre-filled.</p>
-      <p class="about-note">Only merchants with real footfall and reputation are shown by default; spammy zero-traffic sites are filtered out automatically. Exchange rates come from live public FX feeds with a static fallback.</p>
-    </div>
-    <div class="modal-foot"><button class="btn btn-primary" data-close>Got it</button></div>
-  </div>
-</div>
-
-<div id="toastHost" class="toast-host"></div>
-
+<div id="toast"></div>
 <script type="module" src="app/main.js"></script>
-</body>
-</html>
+</body></html>
