@@ -344,3 +344,11 @@ The unrelated legacy Android prototype was removed from this quantitative-tradin
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+## Also in this repository: Altron PriceFinder
+
+[`altron-pricefinder/`](altron-pricefinder/) is a self-contained web app that finds the
+**lowest trusted price** for goods, hotels, flights and car rentals — with live
+currency (USD/EUR/GBP/AED/PKR/NZD), photo search, geo-spoofing, incognito mode,
+auto-validated coupons and a spam/footfall filter. No install: `python3 altron-pricefinder/server.py`.
+See [`altron-pricefinder/README.md`](altron-pricefinder/README.md).
