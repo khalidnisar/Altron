@@ -347,8 +347,8 @@ MIT. See [LICENSE](LICENSE).
 
 ## Also in this repository: Altron PriceFinder
 
-[`pricefinder/`](pricefinder/) is a self-contained web app that finds the
+[`altron-pricefinder/`](altron-pricefinder/) is a self-contained web app that finds the
 **lowest trusted price** for goods, hotels, flights and car rentals — with live
 currency (USD/EUR/GBP/AED/PKR/NZD), photo search, geo-spoofing, incognito mode,
-auto-validated coupons and a spam/footfall filter. No install: `python3 pricefinder/server.py`.
-See [`pricefinder/README.md`](pricefinder/README.md).
+auto-validated coupons and a spam/footfall filter. No install: `python3 altron-pricefinder/server.py`.
+See [`altron-pricefinder/README.md`](altron-pricefinder/README.md).

@@ -27,7 +27,7 @@ auto-validated coupons, geo-spoofing and incognito mode.
 Requires **Python 3.11+** (stdlib only — no pip install needed).
 
 ```bash
-cd pricefinder
+cd altron-pricefinder
 python3 server.py            # → http://localhost:8000
 ```
 
@@ -67,7 +67,7 @@ embedded in page code.
 ## Project layout
 
 ```text
-pricefinder/
+altron-pricefinder/
 ├── index.html          app shell
 ├── server.py           static server + privacy proxy (stdlib only)
 ├── app/
