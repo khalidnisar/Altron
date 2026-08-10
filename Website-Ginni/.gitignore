@@ -1,0 +1,3 @@
+# Python tooling used by the bundled skill
+__pycache__/
+*.py[cod]
