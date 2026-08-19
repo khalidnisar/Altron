@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ALTRON AutoTrade — AI Trading Command Center</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">⚡</span>
+    <div>
+      <div class="brand-name">ALTRON <b>AUTOTRADE</b></div>
+      <div class="brand-sub">AI Trading Command Center</div>
+    </div>
+  </div>
+  <div class="status-cluster">
+    <span id="mode-badge" class="badge mode">SIM</span>
+    <span id="conn-badge" class="badge conn"><i class="dot"></i>CONNECTING</span>
+    <span id="sim-clock" class="clock">—</span>
+  </div>
+  <div class="controls">
+    <button id="btn-toggle" class="btn warn">⏸ PAUSE TRADING</button>
+    <button id="btn-closeall" class="btn ghost">CLOSE ALL</button>
+    <button id="btn-kill" class="btn danger">■ EMERGENCY STOP</button>
+  </div>
+</header>
+
+<main>
+  <!-- KPI row -->
+  <section class="kpis" id="kpis">
+    <div class="kpi"><div class="kpi-label">EQUITY</div><div class="kpi-value" id="k-equity">—</div><div class="kpi-sub" id="k-day">—</div></div>
+    <div class="kpi"><div class="kpi-label">BALANCE</div><div class="kpi-value" id="k-balance">—</div><div class="kpi-sub" id="k-float">—</div></div>
+    <div class="kpi"><div class="kpi-label">DRAWDOWN</div><div class="kpi-value" id="k-dd">0%</div><div class="kpi-sub" id="k-preserve">NORMAL</div></div>
+    <div class="kpi"><div class="kpi-label">MARGIN LEVEL</div><div class="kpi-value" id="k-margin">—</div><div class="kpi-sub" id="k-freemargin">—</div></div>
+    <div class="kpi"><div class="kpi-label">WIN RATE</div><div class="kpi-value" id="k-winrate">—</div><div class="kpi-sub" id="k-trades">—</div></div>
+    <div class="kpi"><div class="kpi-label">PROFIT FACTOR</div><div class="kpi-value" id="k-pf">—</div><div class="kpi-sub" id="k-sharpe">—</div></div>
+    <div class="kpi"><div class="kpi-label">NET P&amp;L</div><div class="kpi-value" id="k-net">—</div><div class="kpi-sub" id="k-expect">—</div></div>
+    <div class="kpi"><div class="kpi-label">OPEN POSITIONS</div><div class="kpi-value" id="k-openpos">0</div><div class="kpi-sub" id="k-maxpos">—</div></div>
+  </section>
+
+  <!-- Chart + right rail -->
+  <section class="main-grid">
+    <div class="panel chart-panel">
+      <div class="panel-head">
+        <div class="symbol-tabs" id="symbol-tabs"></div>
+        <div class="quote" id="quote">—</div>
+      </div>
+      <canvas id="candle-chart" height="300"></canvas>
+      <div class="panel-head sub"><span>EQUITY CURVE</span><span class="muted" id="eq-range"></span></div>
+      <canvas id="equity-chart" height="110"></canvas>
+    </div>
+
+    <div class="rail">
+      <div class="panel">
+        <div class="panel-head"><span>SIGNAL RADAR</span><span class="muted">AI ENGINE</span></div>
+        <div id="radar" class="radar"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span>RISK MONITOR</span><span class="muted" id="risk-mode">—</span></div>
+        <div id="risk-bars" class="risk-bars"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Bottom grid -->
+  <section class="bottom-grid">
+    <div class="panel">
+      <div class="panel-head"><span>OPEN POSITIONS</span><span class="muted">LIVE</span></div>
+      <div class="table-wrap"><table id="positions-table">
+        <thead><tr><th>#</th><th>Symbol</th><th>Side</th><th>Vol</th><th>Entry</th><th>Price</th><th>SL</th><th>TP</th><th>Liq Px</th><th>P&amp;L</th><th>R</th><th>Flags</th></tr></thead>
+        <tbody></tbody></table>
+        <div class="empty" id="positions-empty">No open positions — the engine is scanning for setups.</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><span>AGENT GRAPH</span><span class="muted">LANGGRAPH CYCLES</span></div>
+      <div id="graph-runs" class="graph-runs"></div>
+      <div class="panel-head sub"><span>🧠 LEARNING & AUTO-FIX</span><span class="muted" id="learn-stats"></span></div>
+      <div id="lessons-feed" class="lessons-feed"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><span>HTF STRUCTURE &amp; LIQUIDITY</span><span class="muted">MULTI-TF</span></div>
+      <div id="structure-panel" class="structure-panel"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><span>ACTIVITY / ALERTS</span><span class="muted">STREAM</span></div>
+      <div id="alerts-feed" class="alerts-feed"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><span>SIGNAL LEDGER</span><span class="muted">DECISIONS</span></div>
+      <div class="table-wrap tall"><table id="signals-table">
+        <thead><tr><th>Time</th><th>Symbol</th><th>Side</th><th>Conf</th><th>Strategy</th><th>Verdict</th></tr></thead>
+        <tbody></tbody></table></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><span>TRADE HISTORY</span><span class="muted" id="hist-count"></span></div>
+      <div class="table-wrap tall"><table id="deals-table">
+        <thead><tr><th>Close time</th><th>Symbol</th><th>Side</th><th>Vol</th><th>Entry → Exit</th><th>P&amp;L</th><th>Exit reason</th></tr></thead>
+        <tbody></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- Trade copier -->
+  <section class="copier-section">
+    <div class="panel">
+      <div class="panel-head">
+        <span>⇄ TRADE COPIER</span>
+        <span class="muted" id="copier-count">0 / 10 LINKED ACCOUNTS</span>
+      </div>
+      <div id="master-card" class="master-card"></div>
+      <div class="copier-grid" id="copier-grid"></div>
+      <div class="add-account">
+        <span class="add-title">LINK ACCOUNT</span>
+        <input id="aa-label" placeholder="Label (e.g. FTMO #2)">
+        <input id="aa-login" placeholder="MT5 login (optional)">
+        <select id="aa-type">
+          <option value="simulated">SIM · Paper</option>
+          <option value="mt5_demo">MT5 · DEMO terminal</option>
+        </select>
+        <select id="aa-mode">
+          <option value="proportional">Proportional (balance×mult)</option>
+          <option value="mirror">Mirror 1:1</option>
+          <option value="fixed_lot">Fixed lot</option>
+        </select>
+        <input id="aa-mult" type="number" value="1.0" step="0.1" min="0.01" max="50" title="Multiplier">
+        <label class="chk"><input id="aa-reverse" type="checkbox"> reverse</label>
+        <button id="aa-add" class="btn warn">+ LINK</button>
+      </div>
+    </div>
+  </section>
+
+  <footer id="config-chips" class="chips"></footer>
+</main>
+
+<div id="toast-root"></div>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# ALTRON AutoTrade — configuration (implements blueprint section 10)
+# ─────────────────────────────────────────────────────────────────────────────
+account:
+  starting_balance: 100000.0      # USD
+  leverage: 100
+  currency: USD
+
+engine:
+  broker: auto                    # auto | simulated | mt5_demo
+  tick_interval_seconds: 0.5      # real-time pacing of the engine loop
+  sim_minutes_per_tick: 1         # simulated market minutes per engine tick
+  ticks_per_candle: 15            # 15 sim-minutes ≙ one "M15" bar
+  history_candles: 240            # candles kept per symbol
+  equity_curve_points: 720
+  port: 8100
+
+risk:
+  # Position sizing
+  risk_per_trade_pct: 1.0         # RULE 1: never risk more than 1-2% per trade
+  kelly_enabled: true
+  kelly_fraction: 0.5             # half-Kelly
+  kelly_min_trades: 20
+  kelly_cap_pct: 2.0
+  min_lot: 0.01
+  max_lot: 20.0
+  lot_step: 0.01
+  # Hard stops / portfolio limits
+  max_daily_loss_pct: 2.0         # RULE 5
+  max_weekly_loss_pct: 5.0        # RULE 6
+  max_drawdown_pct: 10.0          # RULE 7 (hard stop)
+  dd_reduce_50_pct: 5.0           # RULE 10: equity preservation tier 1
+  dd_reduce_75_pct: 7.0           # equity preservation tier 2
+  max_positions: 5                # RULE 4
+  max_positions_per_symbol: 1
+  max_currency_exposure: 2        # correlation risk check
+  min_account_balance: 5000.0
+  min_margin_level_pct: 150.0     # CRITICAL alert below
+  margin_reduce_pct: 120.0        # forced deleveraging below
+  # Trade validation
+  min_rr_ratio: 2.0               # RULE 3
+  min_confidence: 70.0            # blueprint: only trade if confidence > 70
+  min_confluence: 3               # RULE 13
+  max_spread_to_stop_pct: 25.0    # liquidity verification
+  # Stop / target management
+  sl_atr_mult: 1.5
+  tp_rr: 2.0                      # final TP at 2R (R:R 1:2)
+  tp_levels: [0.25, 0.50, 0.75, 1.0]   # multi-level TP fractions
+  partial_close_pct: 25.0
+  breakeven_after_level: 2        # move SL to BE once 50% of TP distance hit
+  breakeven_buffer_pips: 1.0
+  trailing_after_level: 2         # trail once 1R+ profit
+  trailing_atr_mult: 1.2
+  time_stop_candles: 96           # close dead trades after ~1 sim-day
+  time_stop_min_r: -0.25
+  time_stop_max_r: 0.5
+  # Rolling-performance guards
+  min_win_rate_pct: 50.0          # RULE 8 (soft guard, rolling window)
+  min_profit_factor: 1.5          # RULE 9 (rolling window)
+  rolling_window: 20
+
+volatility:
+  high_percentile: 0.80           # ATR% above its own 80th pct => HIGH regime
+  lookback: 120
+  high_vol_size_factor: 0.5       # blueprint: halve size in volatile markets
+
+lifecycle:                        # Sword-style strategy promotion/demotion gates
+  min_trades_promote: 12
+  promote_pf: 1.05
+  promote_wr_pct: 45.0
+  probation_pf: 0.8
+  recover_pf: 1.05
+  suspend_pf: 0.5
+  incubation_fail_pf: 0.6
+  max_consec_losses: 5
+  incubation_scale: 0.5
+  probation_scale: 0.5
+
+webhook:
+  external_secret: ""             # or env TRADING_WEBHOOK_SECRET — when set, bridge payloads must authenticate
+
+alerts:
+  cooldown_minutes: 60
+
+symbols:
+  - name: EURUSD
+    base_price: 1.0850
+    digits: 5
+    point: 0.00001
+    pip: 0.0001
+    spread_points: 12
+    slippage_points: 4
+    contract_size: 100000
+    tick_sigma: 0.00012
+    quote_usd: 1.0                # quote-ccy → USD conversion factor mode: direct
+  - name: GBPUSD
+    base_price: 1.2720
+    digits: 5
+    point: 0.00001
+    pip: 0.0001
+    spread_points: 15
+    slippage_points: 5
+    contract_size: 100000
+    tick_sigma: 0.00015
+    quote_usd: 1.0
+  - name: USDJPY
+    base_price: 152.30
+    digits: 3
+    point: 0.001
+    pip: 0.01
+    spread_points: 15
+    slippage_points: 5
+    contract_size: 100000
+    tick_sigma: 0.015
+    quote_usd: -1.0               # negative => divide by price (JPY quote)
+  - name: XAUUSD
+    base_price: 2330.0
+    digits: 2
+    point: 0.01
+    pip: 0.1
+    spread_points: 35
+    slippage_points: 12
+    contract_size: 100
+    tick_sigma: 0.35
+    quote_usd: 1.0
